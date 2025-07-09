@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-extract_HYCOM_SST.py  ––  append a 31-day water temperature window (HYCOM sea_temp_salinity, °C)
+extract_HYCOM_sst.py  ––  append a 31-day water temperature window (HYCOM sea_temp_salinity, °C)
 to every record of a HURDAT-style best-track text file.
 • Each fix gets water_temp_0(D−15)…water_temp_0(D)…water_temp_0(D+15)  => 31 new columns.
 • Output is written one level up, in ../t_data/<base>_HYCOM.txt
