@@ -15,7 +15,7 @@ for file in *.txt; do
     base=$(basename "$file")
     year=${base:4:4}                     # chars 5-8
     [[ ${#year} -ne 4 || ! $year =~ ^[0-9]{4}$ ]] && continue
-    (( year < 1982 || year > 2023 )) && continue
+    (( year < 1993 || year > 2023 )) && continue
 
     out_file="${OUTDIR}/${base%.txt}_HYCOM.txt"
     if [[ -e "$out_file" ]]; then
