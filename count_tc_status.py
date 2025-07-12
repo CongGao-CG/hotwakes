@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-count_tc_types.py – Count occurrences of each tropical-cyclone status code
-(HU, TS, EX, etc.) across all *_SST.txt files in ./t_data or a specified folder.
+count_tc_status.py – Count occurrences of each tropical-cyclone status code
+(HU, TS, EX, etc.) across all *.txt files in ./single_TC or a specified folder.
 
 Usage
 -----
-$ python count_tc_types.py            # uses ./t_data
-$ python count_tc_types.py /path/to/t_data
+$ python count_tc_status.py            # uses ./single_TC
+$ python count_tc_status.py /path/to/a/directory
 """
 import sys
 from pathlib import Path
@@ -25,12 +25,13 @@ def accumulate_counts(path: Path, counts: Counter):
 
 
 def main():
-    t_data_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).with_name('t_data')
-    if not t_data_dir.is_dir():
-        sys.exit(f"✗ Directory '{t_data_dir}' not found")
+    single_TC_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).with_name('single_TC')
+    if not single_TC_dir.is_dir():
+        sys.exit(f"!!! Directory '{single_TC_dir}' not found")
 
+    print(single_TC_dir)
     counts = Counter()
-    for txt in t_data_dir.glob('*_SST.txt'):
+    for txt in single_TC_dir.glob('*.txt'):
         accumulate_counts(txt, counts)
 
     total = sum(counts.values())
