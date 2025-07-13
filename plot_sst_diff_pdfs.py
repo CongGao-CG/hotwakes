@@ -5,16 +5,16 @@ hurricane fixes only** (status codes TS and HU) gathered from *_SST.txt files.
 
 Panels
 ------
-a : ΔT = SST(Day 0) − SST(Day −15)
-b : ΔT = SST(Day 0) − SST(Day −10)
-c : ΔT = SST(Day 0) − mean[SST(Day −10 … −4)]
+a : ΔT = SST(Day 0) − SST(Day −15)
+b : ΔT = SST(Day 0) − SST(Day −10)
+c : ΔT = SST(Day 0) − mean[SST(Day −10 … −4)]
 
 Key points
 ----------
 * Only rows whose fourth column is **TS** or **HU** contribute.
-* ΔT > 0 region filled **red**; ΔT < 0 **blue**.
+* ΔT > 0 region filled **red**; ΔT < 0 **blue**.
 * Bold panel letters at upper‑left; descriptive text centred.
-* “XX.X % of ΔSST > 0” shown at upper‑right.
+* "XX.X % of ΔSST > 0" shown at upper‑right.
 * Figure saved as *sst_diff_pdfs.png* and *.pdf* and displayed.
 
 Usage
@@ -27,39 +27,13 @@ import sys
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
-import re
-from typing import List
+from sst_loader import load_windows
 
 try:
     from scipy.stats import gaussian_kde  # type: ignore
     HAVE_KDE = True
 except ImportError:
     HAVE_KDE = False
-
-VALID_STATUSES = {"TS", "HU"}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# data loader (filter TS & HU)
-# ─────────────────────────────────────────────────────────────────────────────
-
-def load_windows(t_data_dir: Path) -> np.ndarray:
-    rows: List[np.ndarray] = []
-    for txt in sorted(t_data_dir.glob('*_SST.txt')):
-        with txt.open() as f:
-            for line in f:
-                if not re.match(r"^\d{8},", line):
-                    continue
-                parts = [p.strip() for p in line.split(',')]
-                if len(parts) < 31 or parts[3] not in VALID_STATUSES:
-                    continue
-                try:
-                    sst = np.array(parts[-31:], dtype=float)
-                except ValueError:
-                    continue
-                rows.append(sst)
-    if not rows:
-        raise RuntimeError('No TS or HU rows with SST data found.')
-    return np.stack(rows)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # plotting helper (unchanged)
