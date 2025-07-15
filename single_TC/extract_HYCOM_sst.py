@@ -55,7 +55,7 @@ def main(infile: str) -> None:
     out_dir  = in_path.parent.parent / "t_data"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / f"{in_path.stem}_HYCOM.txt"
-    ee.Initialize()
+    ee.Initialize(project='ee-cnggao')
     hycom = ee.ImageCollection("HYCOM/sea_temp_salinity")
     # ── read track file ───────────────────────────────────────────────────────
     date_line = re.compile(r"^\d{8},")

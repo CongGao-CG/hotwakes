@@ -59,7 +59,7 @@ def main(infile: str) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / f"{in_path.stem}_SST.txt"
 
-    ee.Initialize()
+    ee.Initialize(project='ee-cnggao')
     oisst = ee.ImageCollection("NOAA/CDR/OISST/V2_1")
 
     # ── read track file ───────────────────────────────────────────────────────
