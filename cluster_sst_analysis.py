@@ -171,7 +171,7 @@ def main():
         sys.exit(f"✗ Directory '{t_data_dir}' not found")
     
     print("Loading SST data...")
-    data = load_windows(t_data_dir)  # Shape: (n_samples, 31)
+    data = load_windows(t_data_dir, basin="AL", source="OISST")  # Shape: (n_samples, 31)
     print(f"✓ Loaded {data.shape[0]} SST windows")
     
     # Normalize data
