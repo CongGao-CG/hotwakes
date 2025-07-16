@@ -2,12 +2,17 @@
 """
 plot_sst_diff_pdfs.py – PDFs of three ΔSST metrics **for tropical‑storm and
 hurricane fixes only** (status codes TS and HU) gathered from *_SST.txt files.
-
 Panels
 ------
+Row 1 (AL + OISST):
 a : ΔT = SST(Day 0) − SST(Day −15)
 b : ΔT = SST(Day 0) − SST(Day −10)
 c : ΔT = SST(Day 0) − mean[SST(Day −10 … −4)]
+
+Row 2 (AL + HYCOM):
+d : ΔT = SST(Day 0) − SST(Day −15)
+e : ΔT = SST(Day 0) − SST(Day −10)
+f : ΔT = SST(Day 0) − mean[SST(Day −10 … −4)]
 
 Key points
 ----------
@@ -16,13 +21,11 @@ Key points
 * Bold panel letters at upper‑left; descriptive text centred.
 * "XX.X % of ΔSST > 0" shown at upper‑right.
 * Figure saved as *sst_diff_pdfs.png* and *.pdf* and displayed.
-
 Usage
 -----
 $ python plot_sst_diff_pdfs.py            # scans ./t_data
 $ python plot_sst_diff_pdfs.py /path/to/t_data
 """
-
 import sys
 from pathlib import Path
 import numpy as np
@@ -36,17 +39,16 @@ except ImportError:
     HAVE_KDE = False
 
 # ─────────────────────────────────────────────────────────────────────────────
-# plotting helper (unchanged)
+# plotting helper (updated to include basin and source info)
 # ─────────────────────────────────────────────────────────────────────────────
-
-def plot_pdf(ax, data: np.ndarray, panel: str, desc: str):
+def plot_pdf(ax, data: np.ndarray, panel: str, desc: str, basin: str, source: str):
     data = data[np.isfinite(data)]
     if data.size == 0:
         ax.text(0.5, 0.5, 'No data', ha='center', va='center')
         return
-
+    
     pct_pos = (data > 0).mean() * 100
-
+    
     if HAVE_KDE and data.size >= 2:
         kde = gaussian_kde(data)
         x_vals = np.linspace(data.min(), data.max(), 400)
@@ -60,12 +62,11 @@ def plot_pdf(ax, data: np.ndarray, panel: str, desc: str):
         centers = 0.5 * (bins[:-1] + bins[1:])
         colors = ['red' if c > 0 else 'blue' for c in centers]
         ax.bar(centers, counts, width=np.diff(bins), color=colors, alpha=0.7, align='center')
-
+    
     ax.set_xlabel('ΔSST (°C)')
     ax.set_ylabel('Probability density')
-    ax.set_title(desc, fontsize=10)
+    ax.set_title(f'{desc} ({basin} + {source})', fontsize=10)
     ax.grid(True, ls=':')
-
     ax.text(0.02, 0.96, f'$\\mathbf{{{panel}}}$', transform=ax.transAxes,
             ha='left', va='top', fontsize=11)
     ax.text(0.98, 0.95, f'{pct_pos:.1f}% of ΔSST > 0', transform=ax.transAxes,
@@ -74,34 +75,54 @@ def plot_pdf(ax, data: np.ndarray, panel: str, desc: str):
 # ─────────────────────────────────────────────────────────────────────────────
 # main
 # ─────────────────────────────────────────────────────────────────────────────
-
 def main():
     t_data_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).with_name('t_data')
     if not t_data_dir.is_dir():
         sys.exit(f"✗ Directory '{t_data_dir}' not found")
-
-    data = load_windows(t_data_dir)
-
+    
+    # Load data for AL basin from both sources
+    data_oisst = load_windows(t_data_dir, basin="AL", source="OISST")
+    data_hycom = load_windows(t_data_dir, basin="AL", source="HYCOM")
+    
+    # Calculate differences for both datasets
     idx0, idx_m15, idx_m10, idx_m4 = 15, 0, 5, 11
-    diff_a = data[:, idx0] - data[:, idx_m15]
-    diff_b = data[:, idx0] - data[:, idx_m10]
-    diff_c = data[:, idx0] - data[:, idx_m10:idx_m4+1].mean(axis=1)
-
-    fig, axes = plt.subplots(1, 3, figsize=(13, 4), sharey=True)
-    plot_pdf(axes[0], diff_a, 'a', 'ΔSST: Day 0 − Day −15')
-    plot_pdf(axes[1], diff_b, 'b', 'ΔSST: Day 0 − Day −10')
-    plot_pdf(axes[2], diff_c, 'c', 'ΔSST: Day 0 − mean(Day −10…−4)')
-
-    for ax in axes:
-        ax.tick_params(axis='y', labelleft=True)
-
+    
+    # OISST differences
+    diff_a_oisst = data_oisst[:, idx0] - data_oisst[:, idx_m15]
+    diff_b_oisst = data_oisst[:, idx0] - data_oisst[:, idx_m10]
+    diff_c_oisst = data_oisst[:, idx0] - data_oisst[:, idx_m10:idx_m4+1].mean(axis=1)
+    
+    # HYCOM differences
+    diff_a_hycom = data_hycom[:, idx0] - data_hycom[:, idx_m15]
+    diff_b_hycom = data_hycom[:, idx0] - data_hycom[:, idx_m10]
+    diff_c_hycom = data_hycom[:, idx0] - data_hycom[:, idx_m10:idx_m4+1].mean(axis=1)
+    
+    # Create 2x3 subplot layout
+    fig, axes = plt.subplots(2, 3, figsize=(15, 8), sharey=True)
+    
+    # Row 1: AL + OISST
+    plot_pdf(axes[0, 0], diff_a_oisst, 'a', 'ΔSST: Day 0 − Day −15', 'AL', 'OISST')
+    plot_pdf(axes[0, 1], diff_b_oisst, 'b', 'ΔSST: Day 0 − Day −10', 'AL', 'OISST')
+    plot_pdf(axes[0, 2], diff_c_oisst, 'c', 'ΔSST: Day 0 − mean(Day −10…−4)', 'AL', 'OISST')
+    
+    # Row 2: AL + HYCOM
+    plot_pdf(axes[1, 0], diff_a_hycom, 'd', 'ΔSST: Day 0 − Day −15', 'AL', 'HYCOM')
+    plot_pdf(axes[1, 1], diff_b_hycom, 'e', 'ΔSST: Day 0 − Day −10', 'AL', 'HYCOM')
+    plot_pdf(axes[1, 2], diff_c_hycom, 'f', 'ΔSST: Day 0 − mean(Day −10…−4)', 'AL', 'HYCOM')
+    
+    # Enable y-axis labels for all subplots
+    for ax_row in axes:
+        for ax in ax_row:
+            ax.tick_params(axis='y', labelleft=True)
+    
     fig.tight_layout()
+    
+    # Save figure
     for ext in ('png', 'pdf'):
         fig.savefig(Path(f'sst_diff_pdfs.{ext}'), dpi=300)
-    print('✓ Figure saved as sst_diff_pdfs.png and .pdf (TS & HU only)')
-
+    
+    print('✓ Figure saved as sst_diff_pdfs.png and .pdf (AL basin: OISST vs HYCOM, TS & HU only)')
     plt.show()
-
 
 if __name__ == '__main__':
     main()
