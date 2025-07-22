@@ -3,10 +3,12 @@
 plot_sst_window.py – 31-day SST anomalies for TS & HU fixes
 (two panels, baseline = mean SST Day −10 ... −4).
 
+Usage: python plot_sst_window.py basin [t_data_dir]
+
 Panels
 ------
-**a**  ΔSST = SST0 − mean(SST−10...−4) (AL + OISST)
-**b**  ΔSST = SST0 − mean(SST−10...−4) (AL + HYCOM)
+**a**  ΔSST = SST0 − mean(SST−10...−4) (basin + OISST)
+**b**  ΔSST = SST0 − mean(SST−10...−4) (basin + HYCOM)
 
 Line colours
 ------------
@@ -14,7 +16,7 @@ Line colours
 * **blue**  – Median & Mean for ΔSST < 0
 * **red**   – Median & Mean for ΔSST > 0
 
-The plot is saved as *sst_window_stats.png* and *.pdf* and displayed.
+The plot is saved as *sst_window_stats_basin.png* and *.pdf* and displayed.
 """
 import sys
 from pathlib import Path
@@ -71,28 +73,43 @@ def plot_sst_window(ax, data: np.ndarray, panel: str, basin: str, source: str):
 # Main
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
-    t_data_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).with_name('t_data')
+    # Parse command line arguments
+    if len(sys.argv) < 2:
+        sys.exit("Usage: python plot_sst_window.py basin [t_data_dir]")
+    
+    basin = sys.argv[1].upper()  # Convert to uppercase for consistency
+    
+    # Get t_data directory (use second argument or default)
+    if len(sys.argv) > 2:
+        t_data_dir = Path(sys.argv[2])
+    else:
+        t_data_dir = Path(__file__).with_name('t_data')
+    
     if not t_data_dir.is_dir():
         sys.exit(f"✗ Directory '{t_data_dir}' not found")
     
-    # Load data for AL basin from both sources
-    data_oisst = load_windows(t_data_dir, basin="AL", source="OISST")
-    data_hycom = load_windows(t_data_dir, basin="AL", source="HYCOM")
+    # Load data for specified basin from both sources
+    try:
+        data_oisst = load_windows(t_data_dir, basin=basin, source="OISST")
+        data_hycom = load_windows(t_data_dir, basin=basin, source="HYCOM")
+    except Exception as e:
+        sys.exit(f"✗ Error loading data for basin '{basin}': {e}")
     
     # Create 2x1 subplot layout
     fig, axes = plt.subplots(2, 1, figsize=(8, 8))
     
     # Plot both panels
-    plot_sst_window(axes[0], data_oisst, 'a', 'AL', 'OISST')
-    plot_sst_window(axes[1], data_hycom, 'b', 'AL', 'HYCOM')
+    plot_sst_window(axes[0], data_oisst, 'a', basin, 'OISST')
+    plot_sst_window(axes[1], data_hycom, 'b', basin, 'HYCOM')
     
     fig.tight_layout()
     
-    # Save figure
+    # Save figure with basin name in filename
     for ext in ('png', 'pdf'):
-        fig.savefig(Path('sst_window_stats.' + ext), dpi=300)
+        filename = f'sst_window_stats_{basin}.{ext}'
+        fig.savefig(Path(filename), dpi=300)
     
-    print('✓ Figure saved as sst_window_stats.png and .pdf (AL basin: OISST vs HYCOM, TS & HU only)')
+    print(f'✓ Figure saved as sst_window_stats_{basin}.png and .pdf ({basin} basin: OISST vs HYCOM, TS & HU only)')
     plt.show()
 
 if __name__ == '__main__':
