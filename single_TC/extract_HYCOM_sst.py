@@ -9,7 +9,7 @@ to every record of a HURDAT-style best-track text file.
 
 Example
 -------
-$ python extract_HYCOM_SST.py AL312020_IOTA_26.txt
+$ python extract_HYCOM_sst.py AL312020_IOTA_26.txt
 →  ../t_data/AL312020_IOTA_26_HYCOM.txt
 """
 import sys, os, re
@@ -98,5 +98,5 @@ def main(infile: str) -> None:
     print(f"✓ Wrote {display_path}")
 if __name__ == "__main__":
     if len(sys.argv) != 2 or not sys.argv[1].lower().endswith(".txt"):
-        sys.exit("Usage:  python extract_HYCOM_SST.py <trackfile.txt>")
+        sys.exit("Usage:  python extract_HYCOM_sst.py <trackfile.txt>")
     main(sys.argv[1])
