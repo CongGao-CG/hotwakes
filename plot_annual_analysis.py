@@ -154,8 +154,8 @@ def main():
 
     fig.tight_layout()
     for ext in ("png", "pdf"):
-        fig.savefig(Path(f"annual_analysis_{basin}.{ext}"), dpi=300)
-    print(f"✓ Figure saved as annual_analysis_{basin}.png and .pdf")
+        fig.savefig(Path(f"plot/annual_analysis_{basin}.{ext}"), dpi=300)
+    print(f"✓ Figure saved as plot/annual_analysis_{basin}.png and .pdf")
     plt.show()
 
 
