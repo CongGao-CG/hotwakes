@@ -8,7 +8,7 @@ line with a legend showing date/time labels (MMDDHHMM format).
 **Updated**: 
 - Only processes records with status TS or HU in the fourth column
 - Excludes time series with NaN values
-- Only plots warm wakes where ΔT > 0, with ΔT = SST(Day 0) - mean[SST(Day -10 ... -4)]
+- Only plots hot wakes where ΔT > 0, with ΔT = SST(Day 0) - mean[SST(Day -10 ... -4)]
 - Shows legend with date/time labels for each line
 
 Usage
@@ -30,7 +30,7 @@ def load_windows(txt_path: Path) -> tuple[np.ndarray, list[str]]:
     Only includes records where:
     - Fourth column contains 'TS' or 'HU'
     - No NaN values present
-    - ΔT > 0 (warm wake), where ΔT = SST(Day 0) - mean[SST(Day -10 ... -4)]
+    - ΔT > 0 (hot wake), where ΔT = SST(Day 0) - mean[SST(Day -10 ... -4)]
     
     Returns:
         tuple: (sst_array, labels) where labels are formatted as MMDDHHMM
@@ -66,7 +66,7 @@ def load_windows(txt_path: Path) -> tuple[np.ndarray, list[str]]:
             sst_pre = sst[5:12]  # indices 5 through 11 (Day -10 to Day -4)
             delta_t = sst_day0 - np.mean(sst_pre)
             
-            # Only keep warm wakes (ΔT > 0)
+            # Only keep hot wakes (ΔT > 0)
             if delta_t > 0:
                 windows.append(sst)
                 # Format date/time label as MMDDHHMM
@@ -76,7 +76,7 @@ def load_windows(txt_path: Path) -> tuple[np.ndarray, list[str]]:
                 labels.append(label)
                 
     if not windows:
-        raise RuntimeError(f'No warm wake SST windows with TS/HU status found in {txt_path}')
+        raise RuntimeError(f'No hot wake SST windows with TS/HU status found in {txt_path}')
     return np.stack(windows), labels
 # ─────────────────────────────────────────────────────────────────────────────
 # main
@@ -98,7 +98,7 @@ def main():
         ax.plot(days, sst, color=c, linewidth=1.2, label=label)
     ax.set_xlabel('Days from storm passage')
     ax.set_ylabel('Sea surface temperature (°C)')
-    ax.set_title(f'{txt_path.name} - Warm wakes (n={n})')
+    ax.set_title(f'{txt_path.name} - Hot wakes (n={n})')
     ax.axvline(0, color='k', linewidth=0.8, alpha=0.6)
     ax.grid(True, ls=':')
     # Add legend
