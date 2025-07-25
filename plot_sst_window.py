@@ -106,10 +106,10 @@ def main():
     
     # Save figure with basin name in filename
     for ext in ('png', 'pdf'):
-        filename = f'sst_window_stats_{basin}.{ext}'
+        filename = f'plot/sst_window_stats_{basin}.{ext}'
         fig.savefig(Path(filename), dpi=300)
     
-    print(f'✓ Figure saved as sst_window_stats_{basin}.png and .pdf ({basin} basin: OISST vs HYCOM, TS & HU only)')
+    print(f'✓ Figure saved as plot/sst_window_stats_{basin}.png and .pdf ({basin} basin: OISST vs HYCOM, TS & HU only)')
     plt.show()
 
 if __name__ == '__main__':
