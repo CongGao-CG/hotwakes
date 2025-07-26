@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-find_mixed_missing_sst.py – Locate *_SST.txt files that contain **rows with a
+find_mixed_missing_sst.py – Locate *_OISST.txt files that contain **rows with a
 mix of valid and missing SST values**, and report the exact line numbers.
 
 A token is considered *missing* if, after stripping blanks, it equals any of
@@ -51,7 +51,7 @@ def main():
         sys.exit(f"✗ Directory '{t_data_dir}' not found")
 
     found = False
-    for txt in sorted(t_data_dir.glob('*_SST.txt')):
+    for txt in sorted(t_data_dir.glob('*_OISST.txt')):
         for lineno, content in mixed_rows(txt):
             if not found:
                 print("Files and rows with mixed missing/non-missing SST values:")

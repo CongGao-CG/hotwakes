@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 plot_single_track_sst_normalized.py – Plot normalized sea-surface temperatures from a single
-*_SST.txt best-track file produced by extract_sst.py.
+*_OISST.txt best-track file produced by extract_sst.py.
 
 The script draws every 31-day SST window (Day −15 … +15) as a separate coloured
 line, *without* a legend, and shows the figure interactively.
 
 Usage
 -----
-$ python plot_single_track_sst_normalized.py AL201984_LILI_49_SST.txt
+$ python plot_single_track_sst_normalized.py t_data/AL201984_LILI_49_OISST.txt
 
 • The figure title is the basename of the input file.
 • The plot is *not* saved to disk; it is only displayed.
@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 # ─────────────────────────────────────────────────────────────────────────────
 
 def load_windows(txt_path: Path) -> np.ndarray:
-    """Return array (n, 31) of SSTs from one *_SST.txt file."""
+    """Return array (n, 31) of SSTs from one *_OISST.txt file."""
     windows = []
     with txt_path.open() as f:
         for line in f:
@@ -50,7 +50,7 @@ def load_windows(txt_path: Path) -> np.ndarray:
 
 def main():
     if len(sys.argv) != 2:
-        sys.exit('Usage: python plot_single_track_sst_normalized.py <*_SST.txt>')
+        sys.exit('Usage: python plot_single_track_sst_normalized.py <*_OISST.txt>')
 
     txt_path = Path(sys.argv[1]).expanduser().resolve()
     if not txt_path.is_file():

@@ -48,8 +48,8 @@ def load_windows(
         If None, loads from all basins
     source : {"OISST", "HYCOM"}, default "OISST"
         Data source:
-        - OISST: *_SST.txt files
-        - HYCOM: *_HYCOM.txt files
+        - OISST: *_OISST.txt files
+        - HYCOM: *_HYCOM_T_0.txt files
         
     Returns
     -------

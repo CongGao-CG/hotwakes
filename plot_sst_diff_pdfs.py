@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 plot_sst_diff_pdfs.py – PDFs of three ΔSST metrics **for tropical‑storm and
-hurricane fixes only** (status codes TS and HU) gathered from *_SST.txt files.
+hurricane fixes only** (status codes TS and HU) gathered from *_OISST.txt or *_HYCOM_T_0.txt files.
 Panels
 ------
 Row 1 (basin + OISST):

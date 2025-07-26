@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 plot_single_track_sst.py – Plot raw sea-surface temperatures from a single
-*_SST.txt best-track file produced by extract_sst.py.
+*_OISST.txt best-track file produced by extract_sst.py.
 The script draws every 31-day SST window (Day −15 … +15) as a separate coloured
 line with a legend showing date/time labels (MMDDHHMM format).
 
@@ -13,7 +13,7 @@ line with a legend showing date/time labels (MMDDHHMM format).
 
 Usage
 -----
-$ python plot_single_track_sst.py AL201984_LILI_49_SST.txt
+$ python plot_single_track_sst.py t_data/AL201984_LILI_49_OISST.txt
 • The figure title is the basename of the input file.
 • The plot is *not* saved to disk; it is only displayed.
 """
@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 # load SST data from a single file
 # ─────────────────────────────────────────────────────────────────────────────
 def load_windows(txt_path: Path) -> tuple[np.ndarray, list[str]]:
-    """Return array (n, 31) of SSTs and list of date/time labels from one *_SST.txt file.
+    """Return array (n, 31) of SSTs and list of date/time labels from one *_OISST.txt file.
     
     Only includes records where:
     - Fourth column contains 'TS' or 'HU'
@@ -83,7 +83,7 @@ def load_windows(txt_path: Path) -> tuple[np.ndarray, list[str]]:
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
     if len(sys.argv) != 2:
-        sys.exit('Usage: python plot_single_track_sst.py <*_SST.txt>')
+        sys.exit('Usage: python plot_single_track_sst.py <*_OISST.txt>')
     txt_path = Path(sys.argv[1]).expanduser().resolve()
     if not txt_path.is_file():
         sys.exit(f"✗ '{txt_path}' not found")
