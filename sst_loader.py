@@ -22,7 +22,7 @@ BASIN_CODES = {
 # Source file suffix mappings
 SOURCE_SUFFIXES = {
     "OISST": "_SST.txt",
-    "HYCOM": "_HYCOM.txt"
+    "HYCOM": "_HYCOM_T_0.txt"
 }
 
 def load_windows(
