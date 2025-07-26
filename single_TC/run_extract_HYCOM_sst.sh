@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# run_extract_sst.sh ── run extract_HYCOM_sst.py on every best-track file
+# run_extract_HYCOM_sst.sh ── run extract_HYCOM_sst.py on every best-track file
 # whose storm year (chars 5-8 of the filename) ≥ 1993 and <= 2023
-# If ../t_data/<basename>_HYCOM.txt already exists, skip processing.
+# If ../t_data/<basename>_HYCOM_T_0.txt already exists, skip processing.
 
 set -euo pipefail
 shopt -s nullglob
@@ -17,7 +17,7 @@ for file in *.txt; do
     [[ ${#year} -ne 4 || ! $year =~ ^[0-9]{4}$ ]] && continue
     (( year < 1993 || year > 2023 )) && continue
 
-    out_file="${OUTDIR}/${base%.txt}_HYCOM.txt"
+    out_file="${OUTDIR}/${base%.txt}_HYCOM_T_0.txt"
     if [[ -e "$out_file" ]]; then
         echo "▶ skipping  $file  (output exists)"
         continue

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-extract_sst.py  ––  append a 31-day SST window (NOAA OISST v2.1, °C)
+extract_OISST.py  ––  append a 31-day SST window (NOAA OISST v2.1, °C)
 to every record of a HURDAT-style best-track text file.
 
 • Each fix gets SST(D−15)…SST(D)…SST(D+15)  => 31 new columns.
-• Output is written one level up, in ../t_data/<base>_SST.txt
+• Output is written one level up, in ../t_data/<base>_OISST.txt
 
 Example
 -------
-$ python extract_sst.py AL312020_IOTA_26.txt
-→  ../t_data/AL312020_IOTA_26_SST.txt
+$ python extract_OISST.py AL312020_IOTA_26.txt
+→  ../t_data/AL312020_IOTA_26_OISST.txt
 """
 import sys, os, re
 from pathlib import Path
@@ -54,10 +54,10 @@ def main(infile: str) -> None:
     if not in_path.is_file():
         sys.exit(f"✗ '{infile}' not found")
 
-    # ../t_data/<base>_SST.txt
+    # ../t_data/<base>_OISST.txt
     out_dir  = in_path.parent.parent / "t_data"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / f"{in_path.stem}_SST.txt"
+    out_file = out_dir / f"{in_path.stem}_OISST.txt"
 
     ee.Initialize(project='ee-cnggao')
     oisst = ee.ImageCollection("NOAA/CDR/OISST/V2_1")
@@ -112,5 +112,5 @@ def main(infile: str) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) != 2 or not sys.argv[1].lower().endswith(".txt"):
-        sys.exit("Usage:  python extract_sst.py <trackfile.txt>")
+        sys.exit("Usage:  python extract_OISST.py <trackfile.txt>")
     main(sys.argv[1])

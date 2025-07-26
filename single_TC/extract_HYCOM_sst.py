@@ -3,14 +3,14 @@
 extract_HYCOM_sst.py  ––  append a 31-day water temperature window (HYCOM sea_temp_salinity, °C)
 to every record of a HURDAT-style best-track text file.
 • Each fix gets water_temp_0(D−15)…water_temp_0(D)…water_temp_0(D+15)  => 31 new columns.
-• Output is written one level up, in ../t_data/<base>_HYCOM.txt
+• Output is written one level up, in ../t_data/<base>_HYCOM_T_0.txt
 • HYCOM water_temp_0 values are scaled: actual_temp = (value * 0.001) + 20
 • HYCOM data is on a 0.08° lat/long grid; water_temp_0 is surface temperature
 
 Example
 -------
 $ python extract_HYCOM_sst.py AL312020_IOTA_26.txt
-→  ../t_data/AL312020_IOTA_26_HYCOM.txt
+→  ../t_data/AL312020_IOTA_26_HYCOM_T_0.txt
 """
 import sys, os, re
 from pathlib import Path
@@ -51,10 +51,10 @@ def main(infile: str) -> None:
     in_path = Path(infile).expanduser().resolve()
     if not in_path.is_file():
         sys.exit(f"✗ '{infile}' not found")
-    # ../t_data/<base>_HYCOM.txt
+    # ../t_data/<base>_HYCOM_T_0.txt
     out_dir  = in_path.parent.parent / "t_data"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_file = out_dir / f"{in_path.stem}_HYCOM.txt"
+    out_file = out_dir / f"{in_path.stem}_HYCOM_T_0.txt"
     ee.Initialize(project='ee-cnggao')
     hycom = ee.ImageCollection("HYCOM/sea_temp_salinity")
     # ── read track file ───────────────────────────────────────────────────────

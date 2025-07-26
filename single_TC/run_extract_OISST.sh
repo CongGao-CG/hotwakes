@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# run_extract_sst.sh ── run extract_sst.py on every best-track file
+# run_extract_OISST.sh ── run extract_OISST.py on every best-track file
 # whose storm year (chars 5-8 of the filename) ≥ 1982.
-# If ../t_data/<basename>_SST.txt already exists, skip processing.
+# If ../t_data/<basename>_OISST.txt already exists, skip processing.
 
 set -euo pipefail
 shopt -s nullglob
@@ -17,12 +17,12 @@ for file in *.txt; do
     [[ ${#year} -ne 4 || ! $year =~ ^[0-9]{4}$ ]] && continue
     (( year < 1982 )) && continue
 
-    out_file="${OUTDIR}/${base%.txt}_SST.txt"
+    out_file="${OUTDIR}/${base%.txt}_OISST.txt"
     if [[ -e "$out_file" ]]; then
         echo "▶ skipping  $file  (output exists)"
         continue
     fi
 
     echo "▶ processing $file  (year $year)"
-    python extract_sst.py "$file"
+    python extract_OISST.py "$file"
 done
