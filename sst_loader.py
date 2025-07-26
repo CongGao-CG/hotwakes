@@ -21,7 +21,7 @@ BASIN_CODES = {
 
 # Source file suffix mappings
 SOURCE_SUFFIXES = {
-    "OISST": "_SST.txt",
+    "OISST": "_OISST.txt",
     "HYCOM": "_HYCOM_T_0.txt"
 }
 
