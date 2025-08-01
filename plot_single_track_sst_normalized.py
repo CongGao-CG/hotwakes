@@ -18,31 +18,9 @@ import sys
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
+from read_hurricane_data import read_hurricane_data
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# load SST data from a single file
-# ─────────────────────────────────────────────────────────────────────────────
-
-def load_windows(txt_path: Path) -> np.ndarray:
-    """Return array (n, 31) of SSTs from one *_OISST.txt file."""
-    windows = []
-    with txt_path.open() as f:
-        for line in f:
-            if not line[:8].isdigit():
-                continue  # skip header/meta
-            parts = [p.strip() for p in line.split(',')]
-            if len(parts) < 31:
-                continue
-            try:
-                sst = np.array(parts[-31:], dtype=float)
-            except ValueError:
-                continue
-            windows.append(sst)
-    if not windows:
-        raise RuntimeError(f'No SST windows found in {txt_path}')
-    return np.stack(windows)
-
+VALID_STATUSES = {"TS", "HU"}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # main
@@ -55,8 +33,9 @@ def main():
     txt_path = Path(sys.argv[1]).expanduser().resolve()
     if not txt_path.is_file():
         sys.exit(f"✗ '{txt_path}' not found")
-
-    data = load_windows(txt_path)
+    df     = read_hurricane_data(txt_path, hurricane_only=False)
+    df     = df[df['status'].isin(VALID_STATUSES)]
+    data   = np.array(df.iloc[:, -31:])
     row_mean = data.mean(axis=1, keepdims=True)
     row_std  = data.std(axis=1,  keepdims=True)
     data     = (data - row_mean) / row_std

@@ -33,7 +33,7 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sst_loader import load_windows_with_date
+from sst_loader import load_windows
 
 # -----------------------------------------------------------------------------
 # Window indices (columns 1‑31 correspond to days −15…+15)
@@ -122,7 +122,7 @@ def main():
     data = {}
     for src in sources:
         try:
-            arr = load_windows_with_date(t_data_dir, basin=basin, source=src)
+            arr = load_windows(t_data_dir, basin=basin, source=src, with_date=True)
         except Exception as e:
             print(f"⚠ {src} load failed for basin {basin}: {e}")
             arr = np.empty((0, 32))

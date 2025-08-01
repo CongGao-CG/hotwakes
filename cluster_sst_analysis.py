@@ -211,7 +211,7 @@ def main():
     
     # Save the figure
     for ext in ('png', 'pdf'):
-        fig.savefig(Path(f'sst_cluster_analysis.{ext}'), dpi=300, bbox_inches='tight')
+        fig.savefig(Path(f'plot/sst_cluster_analysis.{ext}'), dpi=300, bbox_inches='tight')
     
     print('✓ Figure saved as sst_cluster_analysis.png and .pdf')
     plt.show()

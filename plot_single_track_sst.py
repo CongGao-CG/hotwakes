@@ -20,64 +20,12 @@ $ python plot_single_track_sst.py t_data/AL201984_LILI_49_OISST.txt
 import sys
 from pathlib import Path
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-# ─────────────────────────────────────────────────────────────────────────────
-# load SST data from a single file
-# ─────────────────────────────────────────────────────────────────────────────
-def load_windows(txt_path: Path) -> tuple[np.ndarray, list[str]]:
-    """Return array (n, 31) of SSTs and list of date/time labels from one *_OISST.txt file.
-    
-    Only includes records where:
-    - Fourth column contains 'TS' or 'HU'
-    - No NaN values present
-    - ΔT > 0 (hot wake), where ΔT = SST(Day 0) - mean[SST(Day -10 ... -4)]
-    
-    Returns:
-        tuple: (sst_array, labels) where labels are formatted as MMDDHHMM
-    """
-    windows = []
-    labels = []
-    with txt_path.open() as f:
-        for line in f:
-            if not line[:8].isdigit():
-                continue  # skip header/meta
-            parts = [p.strip() for p in line.split(',')]
-            
-            # Check if fourth column (index 3) is TS or HU
-            if len(parts) < 4:
-                continue
-            if parts[3] not in ['TS', 'HU']:
-                continue
-                
-            if len(parts) < 31:
-                continue
-            try:
-                sst = np.array(parts[-31:], dtype=float)
-            except ValueError:
-                continue
-            
-            # Skip if any NaN values present
-            if np.any(np.isnan(sst)):
-                continue
-            
-            # Calculate ΔT = SST(Day 0) - mean[SST(Day -10 ... -4)]
-            # Day 0 is at index 15, Day -10 is at index 5, Day -4 is at index 11
-            sst_day0 = sst[15]
-            sst_pre = sst[5:12]  # indices 5 through 11 (Day -10 to Day -4)
-            delta_t = sst_day0 - np.mean(sst_pre)
-            
-            # Only keep hot wakes (ΔT > 0)
-            if delta_t > 0:
-                windows.append(sst)
-                # Format date/time label as MMDDHHMM
-                date_str = parts[0]  # YYYYMMDD
-                time_str = parts[1]  # HHMM
-                label = date_str[4:] + time_str  # MMDDHHMM
-                labels.append(label)
-                
-    if not windows:
-        raise RuntimeError(f'No hot wake SST windows with TS/HU status found in {txt_path}')
-    return np.stack(windows), labels
+from read_hurricane_data import read_hurricane_data
+
+VALID_STATUSES = {"TS", "HU"}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # main
 # ─────────────────────────────────────────────────────────────────────────────
@@ -87,7 +35,14 @@ def main():
     txt_path = Path(sys.argv[1]).expanduser().resolve()
     if not txt_path.is_file():
         sys.exit(f"✗ '{txt_path}' not found")
-    data, labels = load_windows(txt_path)
+    df     = read_hurricane_data(txt_path, hurricane_only=False)
+    df     = df[df['status'].isin(VALID_STATUSES)]
+    data   = np.array(df.iloc[:, -31:])
+    labels = pd.to_datetime(df['time']).dt.strftime('%m%d%H%M')
+    sst_day0 = data[:,15]
+    sst_prem = data[:,5:12].mean(axis=1)
+    data   = data[sst_day0 > sst_prem,:]
+    labels = labels[sst_day0 > sst_prem].to_list()
     n = data.shape[0]
     days = np.arange(-15, 16)
     # colour cycle

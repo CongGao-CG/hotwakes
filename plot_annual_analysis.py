@@ -34,7 +34,7 @@ from typing import Dict, Tuple
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sst_loader import load_windows_with_date
+from sst_loader import load_windows
 
 # -----------------------------------------------------------------------------
 # Constants – indices within the 31-day SST window (columns 1-31)
@@ -133,7 +133,7 @@ def main():
     arrays: Dict[str, np.ndarray] = {}
     for src in sources:
         try:
-            arrays[src] = load_windows_with_date(t_data_dir, basin=basin, source=src)
+            arrays[src] = load_windows(t_data_dir, basin=basin, source=src, with_date=True)
         except Exception as e:
             print(f"⚠ {src} load failed for basin {basin}: {e}")
             arrays[src] = np.empty((0, 32))

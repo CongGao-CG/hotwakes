@@ -3,11 +3,6 @@
 find_mixed_missing_sst.py – Locate *_OISST.txt files that contain **rows with a
 mix of valid and missing SST values**, and report the exact line numbers.
 
-A token is considered *missing* if, after stripping blanks, it equals any of
-    • "nan"  (case-insensitive)
-    • "-999" (legacy placeholder)
-    • ""     (empty string)
-
 Output format
 -------------
 <filename>: line <n>  (<first 20 chars of the row…>)
@@ -23,27 +18,7 @@ $ python find_mixed_missing_sst.py /path/to/t_data
 import sys
 from pathlib import Path
 import re
-
-MISSING_STRINGS = {"nan", "", "-999"}
-
-def is_missing(tok: str) -> bool:
-    return tok.strip().lower() in MISSING_STRINGS
-
-
-def mixed_rows(path: Path):
-    """Yield (line_number, line_contents) for mixed missing/valid SST rows."""
-    with path.open() as f:
-        for lineno, line in enumerate(f, 1):
-            if not re.match(r"^\d{8},", line):
-                continue  # skip header/meta
-            parts = [p.strip() for p in line.split(',')]
-            if len(parts) < 31:
-                continue  # not SST-augmented
-            sst_tokens = parts[-31:]
-            miss_mask = [is_missing(t) for t in sst_tokens]
-            if any(miss_mask) and not all(miss_mask):
-                yield lineno, line.rstrip("\n")
-
+from read_hurricane_data import read_hurricane_data
 
 def main():
     t_data_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).with_name('t_data')
@@ -52,13 +27,12 @@ def main():
 
     found = False
     for txt in sorted(t_data_dir.glob('*_OISST.txt')):
-        for lineno, content in mixed_rows(txt):
-            if not found:
-                print("Files and rows with mixed missing/non-missing SST values:")
-                found = True
-            preview = content[:40] + ('…' if len(content) > 40 else '')
-            print(f"{txt.name}: line {lineno}  ({preview})")
-
+        df = read_hurricane_data(txt, hurricane_only=False)
+        df = df.iloc[:, -31:]
+        if any(df.isnull().any(axis=1) & ~df.isnull().all(axis=1)):
+            found = True
+            print(txt) 
+        
     if not found:
         print(f"✓ No mixed rows detected in {t_data_dir}")
 
