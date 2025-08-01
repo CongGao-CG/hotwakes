@@ -7,3 +7,5 @@
 
 `run_extract_OISST.sh`, `run_extract_HYCOM_surface.sh` and `run_extract_HYCOM_TS.sh` was replaced by
 `run_extract_ocean_data.sh`
+
+`run_extract_ocean_data.sh` was replaced by `run_extract_ocean_data.py`
