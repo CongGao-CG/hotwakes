@@ -166,7 +166,7 @@ def get_daily_value(imgcol: ee.ImageCollection, ymd: str, lon: float, lat: float
     pt = ee.Geometry.Point(lon, lat)
     try:
         val = (img.select(band_name)
-                  .reduceRegion(ee.Reducer.first(), pt, scale=20_000)
+                  .reduceRegion(ee.Reducer.first(), pt, scale=1_000)
                   .get(band_name))
         # Apply scale and offset
         return ee.Number(val).multiply(scale).add(offset).getInfo()
