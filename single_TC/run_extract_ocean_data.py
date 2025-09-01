@@ -232,6 +232,8 @@ def main():
             print(f"▶ skipping  {filename}  (output exists)")
             skipped += 1
             continue
+        else:
+            out_file.touch()
         
         # Process the file
         print(f"▶ processing {filename}  (year {year})")
