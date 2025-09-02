@@ -1,8 +1,9 @@
 import pandas as pd
 from datetime import datetime
 import re
+import os
 
-def read_hurricane_data(filepath, hurricane_only=True):
+def read_hurricane_data(filepath, hurricane_only=True, with_name=False):
     """
     Read a HURDAT2 format hurricane track file and return as pandas DataFrame.
     
@@ -10,7 +11,9 @@ def read_hurricane_data(filepath, hurricane_only=True):
     filepath (str): Path to the .txt file containing hurricane data
     hurricane_only (bool): If True, only return basic hurricane data (default).
                           If False, include extended data fields as data-15 to data+15
-    
+    with_name (bool): If True, include a first column 'name' with the storm ID
+                      (e.g., 'AL122003'). Default False.
+     
     Returns:
     pandas.DataFrame: DataFrame with columns [time, status, lat, lon, wind, pressure]
                      and optionally data-15 through data+15 if hurricane_only=False
@@ -54,6 +57,15 @@ def read_hurricane_data(filepath, hurricane_only=True):
     
     with open(filepath, 'r') as file:
         lines = file.readlines()
+
+    storm_id = None
+    try:
+        fname = os.path.basename(filepath)
+        m = re.search(r'[A-Za-z]{2}\d{6}', fname)
+        if m:
+            storm_id = m.group(0).upper()
+    except Exception:
+        pass
     
     # Skip the header line (first line with storm info)
     for line in lines[1:]:
@@ -132,6 +144,9 @@ def read_hurricane_data(filepath, hurricane_only=True):
     # Sort by time to ensure chronological order
     if not df.empty:
         df = df.sort_values('time').reset_index(drop=True)
+    
+    if with_name:
+        df.insert(0, 'name', storm_id)
     
     return df
 
