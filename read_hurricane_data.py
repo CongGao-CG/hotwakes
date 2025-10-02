@@ -100,7 +100,7 @@ def read_hurricane_data(filepath, hurricane_only=True, with_name=False):
             
             # Parse wind and pressure (handle -999 as missing)
             try:
-                wind_val = int(wind) if wind != '-999' else None
+                wind_val = int(wind) if wind not in ['-999', '-99'] else None
             except:
                 wind_val = None
                 
