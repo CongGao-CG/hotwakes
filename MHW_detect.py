@@ -2,6 +2,9 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib.patches import Wedge, Patch, Rectangle
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
 import os
 import subprocess
 from scipy import stats
@@ -114,7 +117,7 @@ ax1.set_zorder(1)
 ax1.patch.set_alpha(0)
 ax1_temp.bar(beryl_data['time'], beryl_data['MHWi'], 
              color='red', alpha=0.6, width=0.1)
-ax1_temp.set_ylabel('MHW intensity (°C)', color='red')
+ax1_temp.set_ylabel('Threshold exceedance (°C)', color='red')
 ax1_temp.tick_params(axis='y', labelcolor='red', colors='red')
 ax1_temp.spines['right'].set_color('red')
 milton_data = name[name['name'] == 'AL142024'][0:18]
@@ -135,7 +138,7 @@ ax2.set_zorder(1)
 ax2.patch.set_alpha(0)
 ax2_temp.bar(milton_data['time'], milton_data['MHWi'], 
              color='red', alpha=0.6, width=0.1)
-ax2_temp.set_ylabel('MHW intensity(°C)', color='red')
+ax2_temp.set_ylabel('Threshold exceedance(°C)', color='red')
 ax2_temp.tick_params(axis='y', labelcolor='red', colors='red')
 ax2_temp.spines['right'].set_color('red')
 plt.tight_layout()
@@ -143,9 +146,6 @@ output_file = "mhw_plot/Fig1.pdf"
 plt.savefig(output_file)
 plt.close()
 subprocess.run(['open', output_file])
-
-if input("Continue? (yes/no): ").lower() != 'yes':
-    exit()
 
 has_mhw_b8211 = name[(name['bLMI'] == True) & (abs(name['lat']) <= 30)].groupby('name')['MHW_b8211'].sum()
 name_wtmhw_b8211 = name[name['name'].isin(has_mhw_b8211[has_mhw_b8211 > 0].index)]
@@ -161,14 +161,192 @@ lmi_nomhw_b8211 = name_nomhw_b8211.groupby('name')['LMI'].max()
 lmi_wtmhw_b9221 = name_wtmhw_b9221.groupby('name')['LMI'].max()
 lmi_nomhw_b9221 = name_nomhw_b9221.groupby('name')['LMI'].max()
 
+basins = {
+    "AL": {"lon": -60.0,  "lat": 30.0,  "total": np.nan,  "with_8211": np.nan, "with_9221":  np.nan},
+    "EP": {"lon": -110.0, "lat": 20.0,  "total": np.nan,  "with_8211": np.nan, "with_9221": np.nan},
+    "SH": {"lon": 140.0,  "lat": -22.0, "total": np.nan, "with_8211": np.nan, "with_9221": np.nan},
+    "IO": {"lon": 75.0,   "lat": 12.0,  "total": np.nan,  "with_8211":  np.nan, "with_9221":  np.nan},
+    "WP": {"lon": 135.0,  "lat": 25.0,  "total": np.nan, "with_8211": np.nan, "with_9221": np.nan},
+}
+basins['AL']['total'] = lmi_wtmhw_b8211.index.str.startswith('AL').sum() + lmi_nomhw_b8211.index.str.startswith('AL').sum()
+basins['EP']['total'] = lmi_wtmhw_b8211.index.str.startswith('EP').sum() + lmi_nomhw_b8211.index.str.startswith('EP').sum() + lmi_wtmhw_b8211.index.str.startswith('CP').sum() + lmi_nomhw_b8211.index.str.startswith('CP').sum()
+basins['SH']['total'] = lmi_wtmhw_b8211.index.str.startswith('SH').sum() + lmi_nomhw_b8211.index.str.startswith('SH').sum()
+basins['IO']['total'] = lmi_wtmhw_b8211.index.str.startswith('IO').sum() + lmi_nomhw_b8211.index.str.startswith('IO').sum()
+basins['WP']['total'] = lmi_wtmhw_b8211.index.str.startswith('WP').sum() + lmi_nomhw_b8211.index.str.startswith('WP').sum()
+basins['AL']['with_8211'] = lmi_wtmhw_b8211.index.str.startswith('AL').sum()
+basins['EP']['with_8211'] = lmi_wtmhw_b8211.index.str.startswith('EP').sum() + lmi_wtmhw_b8211.index.str.startswith('CP').sum()
+basins['SH']['with_8211'] = lmi_wtmhw_b8211.index.str.startswith('SH').sum()
+basins['IO']['with_8211'] = lmi_wtmhw_b8211.index.str.startswith('IO').sum()
+basins['WP']['with_8211'] = lmi_wtmhw_b8211.index.str.startswith('WP').sum()
+basins['AL']['with_9221'] = lmi_wtmhw_b9221.index.str.startswith('AL').sum()
+basins['EP']['with_9221'] = lmi_wtmhw_b9221.index.str.startswith('EP').sum() + lmi_wtmhw_b9221.index.str.startswith('CP').sum()
+basins['SH']['with_9221'] = lmi_wtmhw_b9221.index.str.startswith('SH').sum()
+basins['IO']['with_9221'] = lmi_wtmhw_b9221.index.str.startswith('IO').sum()
+basins['WP']['with_9221'] = lmi_wtmhw_b9221.index.str.startswith('WP').sum()
+global_totals = {"total": lmi_wtmhw_b8211.shape[0] + lmi_nomhw_b8211.shape[0],
+                 "with_8211": lmi_wtmhw_b8211.shape[0],
+                 "with_9221": lmi_wtmhw_b9221.shape[0]}
+
+cycle_cols = plt.rcParams['axes.prop_cycle'].by_key().get('color', ['C0', 'C1'])
+COLOR_NO = cycle_cols[0]
+COLOR_WITH = cycle_cols[1]
+
+FIG_SIZE = (10, 5.5)
+CENTER_X, CENTER_Y = 0.5, 0.5
+OUTER_RADIUS = 0.34
+MIDDLE_RADIUS = 0.26
+INNER_RADIUS = 0.18
+TEXT_OFFSET = 0.09
+
+
+fig = plt.figure(figsize=FIG_SIZE)
+ax = fig.add_subplot(1, 1, 1, projection=ccrs.EqualEarth())
+ax.set_global()
+ax.add_feature(cfeature.LAND.with_scale("110m"), facecolor="0.92", edgecolor="none", zorder=1)
+ax.coastlines(linewidth=0.5, color="0.5", zorder=2)
+
+mask = Rectangle((0, 0), 1, 1, transform=ax.transAxes, facecolor="white", alpha=0.7, zorder=3)
+ax.add_patch(mask)
+
+plate_carree = ccrs.PlateCarree()
+
+legend_handles = [
+    Patch(facecolor=COLOR_WITH, edgecolor="k", linewidth=0.6, label="With-MHW"),
+    Patch(facecolor=COLOR_NO, edgecolor="k", linewidth=0.6, label="No-MHW"),
+]
+ax.legend(handles=legend_handles,
+          bbox_to_anchor=(0.70, 0.90),
+          loc="center",
+          frameon=False,
+          fontsize=9)
+
+global_total = global_totals["total"]
+global_with_8211 = global_totals["with_8211"]
+global_with_9221 = global_totals["with_9221"]
+global_frac_8211 = global_with_8211 / global_total
+global_frac_9221 = global_with_9221 / global_total
+
+global_inset = ax.inset_axes([0.38, 0.18, 0.18, 0.3], transform=ax.transAxes)
+global_inset.set_facecolor("none")
+global_inset.set_xlim(0, 1)
+global_inset.set_ylim(0, 1)
+global_inset.set_aspect("equal")
+global_inset.set_xticks([])
+global_inset.set_yticks([])
+for spine in global_inset.spines.values():
+    spine.set_visible(False)
+
+theta_with_8211 = 360.0 * global_frac_8211
+wedge_with_8211 = Wedge((CENTER_X, CENTER_Y), OUTER_RADIUS, 90 - theta_with_8211, 90,
+                   width=OUTER_RADIUS - MIDDLE_RADIUS,
+                   facecolor=COLOR_WITH, edgecolor="k", linewidth=0.6)
+wedge_without_8211 = Wedge((CENTER_X, CENTER_Y), OUTER_RADIUS, -270, 90 - theta_with_8211,
+                      width=OUTER_RADIUS - MIDDLE_RADIUS,
+                      facecolor=COLOR_NO, edgecolor="k", linewidth=0.6)
+global_inset.add_patch(wedge_with_8211)
+global_inset.add_patch(wedge_without_8211)
+
+theta_with_9221 = 360.0 * global_frac_9221
+wedge_with_9221 = Wedge((CENTER_X, CENTER_Y), MIDDLE_RADIUS, 90 - theta_with_9221, 90,
+                   width=MIDDLE_RADIUS - INNER_RADIUS,
+                   facecolor=COLOR_WITH, edgecolor="k", linewidth=0.6)
+wedge_without_9221 = Wedge((CENTER_X, CENTER_Y), MIDDLE_RADIUS, -270, 90 - theta_with_9221,
+                      width=MIDDLE_RADIUS - INNER_RADIUS,
+                      facecolor=COLOR_NO, edgecolor="k", linewidth=0.6)
+global_inset.add_patch(wedge_with_9221)
+global_inset.add_patch(wedge_without_9221)
+
+info_text_8211 = f"{int(round(global_frac_8211 * 100))}% ({global_with_8211}/{global_total})"
+info_text_9221 = f"{int(round(global_frac_9221 * 100))}% ({global_with_9221}/{global_total})"
+global_inset.text(CENTER_X, CENTER_Y + OUTER_RADIUS + TEXT_OFFSET + 0.10, info_text_8211,
+        ha="center", va="bottom", fontsize=8)
+global_inset.text(CENTER_X, CENTER_Y + OUTER_RADIUS + TEXT_OFFSET, info_text_9221,
+        ha="center", va="bottom", fontsize=8)
+
+global_inset.text(CENTER_X, CENTER_Y, "GL", ha="center", va="center",
+        fontsize=9, fontweight="bold")
+
+donut_width = 0.15
+donut_height = 0.22
+
+for code, basin_entry in basins.items():
+    basin_with_8211 = basin_entry["with_8211"]
+    basin_with_9221 = basin_entry["with_9221"]
+    basin_total = basin_entry["total"]
+    basin_fraction_8211 = basin_with_8211 / basin_total
+    basin_fraction_9221 = basin_with_9221 / basin_total
+
+    projected = ax.projection.transform_points(plate_carree,
+                                               np.array([basin_entry["lon"]]),
+                                               np.array([basin_entry["lat"]]))[0, :2]
+    disp_x, disp_y = ax.transData.transform(projected)
+    axes_x, axes_y = ax.transAxes.inverted().transform((disp_x, disp_y))
+
+    if not np.isfinite(axes_x) or not np.isfinite(axes_y):
+        continue
+
+    x0 = np.clip(axes_x - donut_width / 2.0, 0.0, 1.0 - donut_width)
+    y0 = np.clip(axes_y - donut_height / 2.0, 0.0, 1.0 - donut_height)
+
+    basin_ax = ax.inset_axes([x0, y0, donut_width, donut_height], transform=ax.transAxes, zorder=4)
+    basin_ax.set_facecolor("none")
+    basin_ax.set_xlim(0, 1)
+    basin_ax.set_ylim(0, 1)
+    basin_ax.set_aspect("equal")
+    basin_ax.set_xticks([])
+    basin_ax.set_yticks([])
+    for spine in basin_ax.spines.values():
+        spine.set_visible(False)
+    
+    theta_with_8211 = 360.0 * basin_fraction_8211
+    wedge_with_8211 = Wedge((CENTER_X, CENTER_Y), OUTER_RADIUS, 90 - theta_with_8211, 90,
+                       width=OUTER_RADIUS - MIDDLE_RADIUS,
+                       facecolor=COLOR_WITH, edgecolor="k", linewidth=0.6)
+    wedge_without_8211 = Wedge((CENTER_X, CENTER_Y), OUTER_RADIUS, -270, 90 - theta_with_8211,
+                          width=OUTER_RADIUS - MIDDLE_RADIUS,
+                          facecolor=COLOR_NO, edgecolor="k", linewidth=0.6)
+    basin_ax.add_patch(wedge_with_8211)
+    basin_ax.add_patch(wedge_without_8211)
+    
+    theta_with_9221 = 360.0 * basin_fraction_9221
+    wedge_with_9221 = Wedge((CENTER_X, CENTER_Y), MIDDLE_RADIUS, 90 - theta_with_9221, 90,
+                       width=MIDDLE_RADIUS - INNER_RADIUS,
+                       facecolor=COLOR_WITH, edgecolor="k", linewidth=0.6)
+    wedge_without_9221 = Wedge((CENTER_X, CENTER_Y), MIDDLE_RADIUS, -270, 90 - theta_with_9221,
+                          width=MIDDLE_RADIUS - INNER_RADIUS,
+                          facecolor=COLOR_NO, edgecolor="k", linewidth=0.6)
+    basin_ax.add_patch(wedge_with_9221)
+    basin_ax.add_patch(wedge_without_9221)
+    
+    info_text_8211 = f"{int(round(basin_fraction_8211 * 100))}% ({basin_with_8211}/{basin_total})"
+    info_text_9221 = f"{int(round(basin_fraction_9221 * 100))}% ({basin_with_9221}/{basin_total})"
+    basin_ax.text(CENTER_X, CENTER_Y + OUTER_RADIUS + TEXT_OFFSET + 0.15, info_text_8211,
+            ha="center", va="bottom", fontsize=8)
+    basin_ax.text(CENTER_X, CENTER_Y + OUTER_RADIUS + TEXT_OFFSET, info_text_9221,
+            ha="center", va="bottom", fontsize=8)
+    
+    basin_ax.text(CENTER_X, CENTER_Y, code, ha="center", va="center",
+            fontsize=9, fontweight="bold")
+
+fig.text(0.25, 0.24, "Outer ring: MHW baseline 1982–2011", ha='left', va='top', fontsize=9)
+fig.text(0.25, 0.20, "Inner ring: MHW baseline 1992–2021", ha='left', va='top', fontsize=9)
+
+output_file = "mhw_plot/Fig2.pdf"
+fig.savefig(output_file, bbox_inches="tight")
+plt.close(fig)
+subprocess.run(["open", output_file])
+
+if input("Continue? (yes/no): ").lower() != 'yes':
+    exit()
+
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(5, 7))
 x = np.linspace(0, 200, 200)
 density_wtmhw_b8211 = stats.gaussian_kde(lmi_wtmhw_b8211.dropna())
-ax1.plot(x, density_wtmhw_b8211(x), 'r-', linewidth=2, 
-         label='With-MHW', alpha=0.8)
+ax1.plot(x, density_wtmhw_b8211(x), '-', linewidth=2, 
+         label='With-MHW', alpha=0.8, color=COLOR_WITH)
 density_nomhw_b8211 = stats.gaussian_kde(lmi_nomhw_b8211.dropna())
-ax1.plot(x, density_nomhw_b8211(x), 'b-', linewidth=2, 
-         label='No-MHW', alpha=0.8)
+ax1.plot(x, density_nomhw_b8211(x), '-', linewidth=2, 
+         label='No-MHW', alpha=0.8, color=COLOR_NO)
 ax1.set_xlabel('Lifetime maximum intensity (knots)')
 ax1.set_ylabel('Probability density')
 ax1.legend(loc='best')
@@ -177,11 +355,11 @@ ax1.set_title('GL: MHW baseline 1982–2011')
 ax1.text(0.02, 0.98, 'a', transform=ax1.transAxes, fontsize=12, fontweight='bold',
          verticalalignment='top')
 density_wtmhw_b9221 = stats.gaussian_kde(lmi_wtmhw_b9221.dropna())
-ax2.plot(x, density_wtmhw_b9221(x), 'r-', linewidth=2,
-         label='With-MHW', alpha=0.8)
+ax2.plot(x, density_wtmhw_b9221(x), '-', linewidth=2,
+         label='With-MHW', alpha=0.8, color=COLOR_WITH)
 density_nomhw_b9221 = stats.gaussian_kde(lmi_nomhw_b9221.dropna())
-ax2.plot(x, density_nomhw_b9221(x), 'b-', linewidth=2,
-         label='No-MHW', alpha=0.8)
+ax2.plot(x, density_nomhw_b9221(x), '-', linewidth=2,
+         label='No-MHW', alpha=0.8, color=COLOR_NO)
 ax2.set_xlabel('Lifetime maximum intensity (knots)')
 ax2.set_ylabel('Probability density')
 ax2.legend(loc='best')
@@ -190,7 +368,7 @@ ax2.set_title('GL: MHW baseline: 1992–2021')
 ax2.text(0.02, 0.98, 'b', transform=ax2.transAxes, fontsize=12, fontweight='bold',
          verticalalignment='top')
 plt.tight_layout()
-output_file = "mhw_plot/Fig2.pdf"
+output_file = "mhw_plot/Fig3.pdf"
 plt.savefig(output_file)
 plt.close()
 subprocess.run(['open', output_file])
@@ -216,12 +394,12 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     x = np.linspace(0, 200, 200)
     if len(lmi_wtmhw.dropna()) > 0:
         density_wtmhw = stats.gaussian_kde(lmi_wtmhw.dropna())
-        ax.plot(x, density_wtmhw(x), 'r-', linewidth=2,
-                label='With-MHW', alpha=0.8)
+        ax.plot(x, density_wtmhw(x), '-', linewidth=2,
+                label='With-MHW', alpha=0.8, color=COLOR_WITH)
     if len(lmi_nomhw.dropna()) > 0:
         density_nomhw = stats.gaussian_kde(lmi_nomhw.dropna())
-        ax.plot(x, density_nomhw(x), 'b-', linewidth=2,
-                label='No-MHW', alpha=0.8)
+        ax.plot(x, density_nomhw(x), '-', linewidth=2,
+                label='No-MHW', alpha=0.8, color=COLOR_NO)
     ax.set_xlabel('Lifetime maximum intensity (knots)')
     ax.set_ylabel('Probability density')
     ax.legend(loc='best')
@@ -250,12 +428,12 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     x = np.linspace(0, 200, 200)
     if len(lmi_wtmhw.dropna()) > 0:
         density_wtmhw = stats.gaussian_kde(lmi_wtmhw.dropna())
-        ax.plot(x, density_wtmhw(x), 'r-', linewidth=2,
-                label='With-MHW', alpha=0.8)
+        ax.plot(x, density_wtmhw(x), '-', linewidth=2,
+                label='With-MHW', alpha=0.8, color=COLOR_WITH)
     if len(lmi_nomhw.dropna()) > 0:
         density_nomhw = stats.gaussian_kde(lmi_nomhw.dropna())
-        ax.plot(x, density_nomhw(x), 'b-', linewidth=2,
-                label='No-MHW', alpha=0.8)
+        ax.plot(x, density_nomhw(x), '-', linewidth=2,
+                label='No-MHW', alpha=0.8, color=COLOR_NO)
     ax.set_xlabel('Lifetime maximum intensity (knots)')
     ax.set_ylabel('Probability density')
     ax.legend(loc='best')
@@ -276,7 +454,7 @@ subprocess.run(['open', output_file])
 fig, axes = plt.subplots(2, 2, figsize=(6, 9))
 axes = axes.flatten()
 x_pos = [0, 1]
-colors   = ['blue', 'red']
+colors   = [COLOR_NO, COLOR_WITH]
 nomhw_se = lmi_nomhw_b8211.dropna().values.std() / np.sqrt(len(lmi_nomhw_b8211.dropna().values))
 wtmhw_se = lmi_wtmhw_b8211.dropna().values.std() / np.sqrt(len(lmi_wtmhw_b8211.dropna().values))
 means   = [lmi_nomhw_b8211.dropna().values.mean(), lmi_wtmhw_b8211.dropna().values.mean()]
@@ -354,7 +532,7 @@ for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
                  f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
 plt.tight_layout()
-output_file = "mhw_plot/Fig3.pdf"
+output_file = "mhw_plot/Fig4.pdf"
 plt.savefig(output_file)
 plt.close()
 subprocess.run(['open', output_file])
@@ -508,7 +686,7 @@ wtmhw_se = ir_wtmhw.dropna().values.std() / np.sqrt(len(ir_wtmhw.dropna().values
 x_pos = [0, 1]
 means = [ir_nomhw.dropna().values.mean(), ir_wtmhw.dropna().values.mean()]
 errors = [nomhw_se, wtmhw_se]
-colors = ['blue', 'red']
+colors = [COLOR_NO, COLOR_WITH]
 bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
                alpha=0.7, edgecolor='black', linewidth=2)
 ax.set_xticks(x_pos)
@@ -633,7 +811,7 @@ for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
                  f'{mean:.2f}', ha='center', va='top', fontsize=12, fontweight='bold')
 
 plt.tight_layout()
-output_file = "mhw_plot/Fig4.pdf"
+output_file = "mhw_plot/Fig5.pdf"
 plt.savefig(output_file)
 plt.close()
 subprocess.run(['open', output_file])
@@ -871,7 +1049,7 @@ axes[3].text(0.02, 0.98, 'd', transform=axes[3].transAxes, fontsize=12, fontweig
              verticalalignment='top')
 """
 plt.tight_layout()
-output_file = "mhw_plot/Fig5.pdf"
+output_file = "mhw_plot/Fig6.pdf"
 plt.savefig(output_file)
 plt.close()
 subprocess.run(['open', output_file])
@@ -973,10 +1151,10 @@ trend_wtmhw = [slope_wtmhw * year + intercept_wtmhw for year in years]
 slope_nomhw, intercept_nomhw, _, _, _ = stats.linregress(years, nomhw_values_b8211)
 print(stats.linregress(years, nomhw_values_b8211))
 trend_nomhw = [slope_nomhw * year + intercept_nomhw for year in years]
-axes[0].plot(years, wtmhw_values_b8211, color='red',  marker='o', markersize=4, label='With-MHW', linewidth=1.5)
-axes[0].plot(years, nomhw_values_b8211, color='blue', marker='o', markersize=4, label='No-MHW',   linewidth=1.5)
-axes[0].plot(years, trend_wtmhw, color='red', linestyle='--', linewidth=2, alpha=0.7)
-axes[0].plot(years, trend_nomhw, color='blue', linestyle='--', linewidth=2, alpha=0.7)
+axes[0].plot(years, wtmhw_values_b8211, color=COLOR_WITH,  marker='o', markersize=4, label='With-MHW', linewidth=1.5)
+axes[0].plot(years, nomhw_values_b8211, color=COLOR_NO, marker='o', markersize=4, label='No-MHW',   linewidth=1.5)
+axes[0].plot(years, trend_wtmhw, color=COLOR_WITH, linestyle='--', linewidth=2, alpha=0.7)
+axes[0].plot(years, trend_nomhw, color=COLOR_NO, linestyle='--', linewidth=2, alpha=0.7)
 axes[0].set_ylabel('TC number')
 axes[0].legend(loc='best')
 axes[0].grid(True, alpha=0.3)
@@ -994,10 +1172,10 @@ trend_wtmhw = [slope_wtmhw * year + intercept_wtmhw for year in years]
 slope_nomhw, intercept_nomhw, _, _, _ = stats.linregress(years, nomhw_values_b9221)
 print(stats.linregress(years, nomhw_values_b9221))
 trend_nomhw = [slope_nomhw * year + intercept_nomhw for year in years]
-axes[1].plot(years, wtmhw_values_b9221, color='red',  marker='o', markersize=4, label='With-MHW', linewidth=1.5)
-axes[1].plot(years, nomhw_values_b9221, color='blue', marker='o', markersize=4, label='No-MHW',   linewidth=1.5)
-axes[1].plot(years, trend_wtmhw, color='red', linestyle='--', linewidth=2, alpha=0.7)
-axes[1].plot(years, trend_nomhw, color='blue', linestyle='--', linewidth=2, alpha=0.7)
+axes[1].plot(years, wtmhw_values_b9221, color=COLOR_WITH,  marker='o', markersize=4, label='With-MHW', linewidth=1.5)
+axes[1].plot(years, nomhw_values_b9221, color=COLOR_NO, marker='o', markersize=4, label='No-MHW',   linewidth=1.5)
+axes[1].plot(years, trend_wtmhw, color=COLOR_WITH, linestyle='--', linewidth=2, alpha=0.7)
+axes[1].plot(years, trend_nomhw, color=COLOR_NO, linestyle='--', linewidth=2, alpha=0.7)
 axes[1].set_ylabel('TC number')
 axes[1].legend(loc='best')
 axes[1].grid(True, alpha=0.3)
@@ -1006,7 +1184,7 @@ axes[1].text(0.02, 0.98, 'a', transform=axes[1].transAxes, fontsize=12, fontweig
              verticalalignment='top')
 
 plt.tight_layout()
-output_file = "mhw_plot/Fig6.pdf"
+output_file = "mhw_plot/Fig7.pdf"
 plt.savefig(output_file)
 plt.close()
 subprocess.run(['open', output_file])
@@ -1028,10 +1206,10 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     slope_nomhw, intercept_nomhw, _, _, _ = stats.linregress(years, nomhw_values)
     print(stats.linregress(years, nomhw_values))
     trend_nomhw = [slope_nomhw * year + intercept_nomhw for year in years]
-    ax.plot(years, wtmhw_values, color='red',  marker='o', markersize=4, label='With-MHW', linewidth=1.5)
-    ax.plot(years, nomhw_values, color='blue', marker='o', markersize=4, label='No-MHW',   linewidth=1.5)
-    ax.plot(years, trend_wtmhw, color='red', linestyle='--', linewidth=2, alpha=0.7)
-    ax.plot(years, trend_nomhw, color='blue', linestyle='--', linewidth=2, alpha=0.7)
+    ax.plot(years, wtmhw_values, color=COLOR_WITH,  marker='o', markersize=4, label='With-MHW', linewidth=1.5)
+    ax.plot(years, nomhw_values, color=COLOR_NO, marker='o', markersize=4, label='No-MHW',   linewidth=1.5)
+    ax.plot(years, trend_wtmhw, color=COLOR_WITH, linestyle='--', linewidth=2, alpha=0.7)
+    ax.plot(years, trend_nomhw, color=COLOR_NO, linestyle='--', linewidth=2, alpha=0.7)
     ax.set_ylabel('TC number')
     ax.legend(loc='upper right')
     ax.grid(True, alpha=0.3)
@@ -1064,10 +1242,10 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     slope_nomhw, intercept_nomhw, _, _, _ = stats.linregress(years, nomhw_values)
     print(stats.linregress(years, nomhw_values))
     trend_nomhw = [slope_nomhw * year + intercept_nomhw for year in years]
-    ax.plot(years, wtmhw_values, color='red',  marker='o', markersize=4, label='With-MHW', linewidth=1.5)
-    ax.plot(years, nomhw_values, color='blue', marker='o', markersize=4, label='No-MHW',   linewidth=1.5)
-    ax.plot(years, trend_wtmhw, color='red', linestyle='--', linewidth=2, alpha=0.7)
-    ax.plot(years, trend_nomhw, color='blue', linestyle='--', linewidth=2, alpha=0.7)
+    ax.plot(years, wtmhw_values, color=COLOR_WITH,  marker='o', markersize=4, label='With-MHW', linewidth=1.5)
+    ax.plot(years, nomhw_values, color=COLOR_NO, marker='o', markersize=4, label='No-MHW',   linewidth=1.5)
+    ax.plot(years, trend_wtmhw, color=COLOR_WITH, linestyle='--', linewidth=2, alpha=0.7)
+    ax.plot(years, trend_nomhw, color=COLOR_NO, linestyle='--', linewidth=2, alpha=0.7)
     ax.set_ylabel('TC number')
     ax.legend(loc='upper right')
     ax.grid(True, alpha=0.3)
