@@ -364,7 +364,7 @@ ax2.set_xlabel('Lifetime maximum intensity (knots)')
 ax2.set_ylabel('Probability density')
 ax2.legend(loc='best')
 ax2.grid(True, alpha=0.3)
-ax2.set_title('GL: MHW baseline: 1992–2021')
+ax2.set_title('GL: MHW baseline 1992–2021')
 ax2.text(0.02, 0.98, 'b', transform=ax2.transAxes, fontsize=12, fontweight='bold',
          verticalalignment='top')
 plt.tight_layout()
@@ -483,7 +483,7 @@ axes[1].set_xticks(x_pos)
 axes[1].set_xticklabels(['No-MHW', 'With-MHW'])
 axes[1].set_ylabel('Lifetime maximum intensity (knots)')
 axes[1].grid(axis='y', alpha=0.3)
-axes[1].set_title('GL: MHW baseline: 1992–2021')
+axes[1].set_title('GL: MHW baseline 1992–2021')
 axes[1].text(0.02, 0.98, 'b', transform=axes[1].transAxes, fontsize=12, fontweight='bold',
              verticalalignment='top')
 for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
