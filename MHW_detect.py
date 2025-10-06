@@ -325,8 +325,8 @@ for code, basin_entry in basins.items():
     basin_ax.text(CENTER_X, CENTER_Y + OUTER_RADIUS + TEXT_OFFSET, info_text_9221,
             ha="center", va="bottom", fontsize=8)
     
-    basin_ax.text(CENTER_X, CENTER_Y, code, ha="center", va="center",
-            fontsize=9, fontweight="bold")
+    # basin_ax.text(CENTER_X, CENTER_Y, code, ha="center", va="center",
+    #         fontsize=9, fontweight="bold")
 
 fig.text(0.25, 0.24, "Outer ring: MHW baseline 1982–2011", ha='left', va='top', fontsize=9)
 fig.text(0.25, 0.20, "Inner ring: MHW baseline 1992–2021", ha='left', va='top', fontsize=9)
