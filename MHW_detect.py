@@ -205,7 +205,7 @@ ax.set_global()
 ax.add_feature(cfeature.LAND.with_scale("110m"), facecolor="0.92", edgecolor="none", zorder=1)
 ax.coastlines(linewidth=0.5, color="0.5", zorder=2)
 
-mask = Rectangle((0, 0), 1, 1, transform=ax.transAxes, facecolor="white", alpha=0.7, zorder=3)
+mask = Rectangle((0, 0), 1, 1, transform=ax.transAxes, facecolor="white", alpha=0.3, zorder=3)
 ax.add_patch(mask)
 
 plate_carree = ccrs.PlateCarree()

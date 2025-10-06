@@ -21,8 +21,10 @@ df['time'] = df['time'] + pd.to_timedelta(offsets, unit='D')
 ds = xr.open_dataset('~/mw/1998_2024-REMSS-L4_GHRSST-SSTfnd-MW_OI-GLOB-v02.0-fv05.1.nc')
 da = ds['analysed_sst']
 
-values = da.sel(time=xr.DataArray(df['time'].apply(lambda x: x.replace(hour=12, minute=0, second=0, microsecond=0)).values, dims='points'),
-                lon=xr.DataArray(df['grid_lon'].values, dims='points'),
-                lat=xr.DataArray(df['grid_lat'].values, dims='points')).values
+values = np.empty(df.shape[0])
+for i, (idx, row) in enumerate(df.iterrows()):
+    values[i] = da.sel(time=xr.DataArray(row['time'].apply(lambda x: x.replace(hour=12, minute=0, second=0, microsecond=0)).values, dims='points'),
+                       lon=xr.DataArray(row['grid_lon'].values, dims='points'),
+                       lat=xr.DataArray(row['grid_lat'].values, dims='points')).values
 
-np.save('mw_501.npy', values)
+np.save('t_data/mw_501.npy', values)
