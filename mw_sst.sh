@@ -17,6 +17,7 @@ name = name[name['btime'] >= '1998-01-16 00:00:00']
 df = name.loc[name.index.repeat(31)].reset_index(drop=True)
 offsets = np.tile(np.arange(-15, 16), len(name))
 df['time'] = df['time'] + pd.to_timedelta(offsets, unit='D')
+df = df[0:100]
 
 ds = xr.open_dataset('~/mw/1998_2024-REMSS-L4_GHRSST-SSTfnd-MW_OI-GLOB-v02.0-fv05.1.nc')
 da = ds['analysed_sst']
