@@ -406,11 +406,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_ylabel('Probability density')
     ax.legend(loc='best')
     ax.grid(True, alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes, 
             fontsize=12, fontweight='bold', verticalalignment='top')
     stats.ks_2samp(lmi_nomhw.dropna(), lmi_wtmhw.dropna())
@@ -444,11 +440,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_ylabel('Probability density')
     ax.legend(loc='best')
     ax.grid(True, alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     stats.ks_2samp(lmi_nomhw.dropna(), lmi_wtmhw.dropna())
@@ -565,11 +557,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Lifetime maximum intensity (knots)')
     ax.grid(axis='y', alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -604,11 +592,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Lifetime maximum intensity (knots)')
     ax.grid(axis='y', alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -643,11 +627,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Intensity change (knots)')
     ax.grid(axis='y', alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -682,11 +662,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Intensity change (knots)')
     ax.grid(axis='y', alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -862,11 +838,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Ratio of rapid-intensification TCs')
     ax.grid(axis='y', alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -903,11 +875,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Ratio of rapid-intensification TCs')
     ax.grid(axis='y', alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -942,11 +910,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Sea surface temperature cooling (°C)')
     ax.grid(axis='y', alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top', bbox=dict(boxstyle='square', facecolor='white', alpha=1, linewidth=0, pad=0.1))
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -981,11 +945,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Sea surface temperature cooling (°C)')
     ax.grid(axis='y', alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top', bbox=dict(boxstyle='square', facecolor='white', alpha=1, linewidth=0, pad=0.1))
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -1121,11 +1081,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xlabel('Number of MHW encounters')
     ax.set_ylabel('Lifetime maximum intensity (knots)')
     ax.grid(True, alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
 
@@ -1162,11 +1118,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xlabel('Number of MHW encounters')
     ax.set_ylabel('Lifetime maximum intensity (knots)')
     ax.grid(True, alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
 
@@ -1263,11 +1215,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_ylabel('TC number')
     ax.legend(loc='upper right')
     ax.grid(True, alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
 
@@ -1303,11 +1251,7 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_ylabel('TC number')
     ax.legend(loc='upper right')
     ax.grid(True, alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
-    if basin_code == 'NA':
-        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
 
