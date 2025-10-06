@@ -22,7 +22,8 @@ df = df[0:100]
 ds = xr.open_dataset('~/mw/1998_2024-REMSS-L4_GHRSST-SSTfnd-MW_OI-GLOB-v02.0-fv05.1.nc')
 da = ds['analysed_sst']
 
-values = da.sel(time=df['time'].apply(lambda x: x.replace(hour=12, minute=0, second=0, microsecond=0)).values,
-                lon=df['grid_lon'].values, lat=df['grid_lat'].values).values
+values = da.sel(time=xr.DataArray(df['time'].apply(lambda x: x.replace(hour=12, minute=0, second=0, microsecond=0)).values, dims='points'),
+                lon=xr.DataArray(df['grid_lon'].values, dims='points'),
+                lat=xr.DataArray(df['grid_lat'].values, dims='points')).values
 
 print(values.shape)
