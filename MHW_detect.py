@@ -14,7 +14,7 @@ from collections import Counter
 from sst_loader import load_windows
 from doy import get_day_of_year_365
 
-data, name = load_windows(Path('t_data'), with_date=False, with_name=True, only_TSHU_status = False)
+data, name = load_windows(Path('t_data'), with_date=False, with_name=True, only_TSHU_status=False)
 bdata = data[:, 5:12].mean(axis=1)
 data = data[:, 11:20]
 name = name.reset_index(drop=True)
