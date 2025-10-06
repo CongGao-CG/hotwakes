@@ -17,11 +17,11 @@ name = name[name['btime'] >= '1998-01-16 00:00:00']
 df = name.loc[name.index.repeat(31)].reset_index(drop=True)
 offsets = np.tile(np.arange(-15, 16), len(name))
 df['time'] = df['time'] + pd.to_timedelta(offsets, unit='D')
-df = df[0:1]
 
 ds = xr.open_dataset('~/mw/1998_2024-REMSS-L4_GHRSST-SSTfnd-MW_OI-GLOB-v02.0-fv05.1.nc')
 da = ds['analysed_sst']
 
-values = da.sel(time=df['time'].apply(lambda x: x.replace(hour=12, minute=0, second=0, microsecond=0)),
-                lon=df['grid_lon'], lat=df['grid_lat']).values
-print(values)
+values = da.sel(time=df['time'].apply(lambda x: x.replace(hour=12, minute=0, second=0, microsecond=0)).values,
+                lon=df['grid_lon'].values, lat=df['grid_lat'].values).values
+
+print(values.shape)
