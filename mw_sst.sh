@@ -22,6 +22,6 @@ df = df[0:1]
 ds = xr.open_dataset('~/mw/1998_2024-REMSS-L4_GHRSST-SSTfnd-MW_OI-GLOB-v02.0-fv05.1.nc')
 da = ds['analysed_sst']
 
-values = da.sel(valid_time=df['time'].apply(lambda x: x.replace(hour=12, minute=0, second=0, microsecond=0)),
+values = da.sel(time=df['time'].apply(lambda x: x.replace(hour=12, minute=0, second=0, microsecond=0)),
                 lon=df['grid_lon'], lat=df['grid_lat']).values
 print(values)
