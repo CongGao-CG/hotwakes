@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
@@ -15,9 +16,18 @@ from sst_loader import load_windows
 from doy import get_day_of_year_365
 
 data, name = load_windows(Path('t_data'), with_date=False, with_name=True, only_TSHU_status=False)
-bdata = data[:, 5:12].mean(axis=1)
-data = data[:, 11:20]
 name = name.reset_index(drop=True)
+
+data_temp = np.load('t_data/mw_501.npy').reshape(-1, 31)
+mw_name = name.copy()
+mw_name['btime'] = mw_name.groupby('name')['time'].transform('min')
+mw_data = np.empty_like(data) * np.nan
+mw_data[mw_name['btime'] >= '1998-01-16 00:00:00'] = data_temp
+
+bdata = data[:, 5:12].mean(axis=1)
+mw_bdata = mw_data[:, 5:12].mean(axis=1)
+data = data[:, 11:20]
+mw_data = mw_data[:, 11:20]
 
 # duplicate CP022022 and CP032002
 name = name.drop(index=range(21167, 21188)).drop(index=range(21489, 21532))
@@ -93,8 +103,11 @@ name['IT'] = name.groupby('name')['dt'].transform(lambda x: x[name.loc[x.index, 
 name.loc[(name['IT'] == 0), 'IT'] = np.nan
 name['IR'] = name['IC'] / name['IT'] * 4
 name['bSST'] = bdata[name.index] 
+name['mw_bSST'] = mw_bdata[name.index] 
 name['cSST'] = data[name.index, 4] 
+name['mw_cSST'] = mw_data[name.index, 4] 
 name['Cooling'] = name['cSST'] - name['bSST']
+name['mw_Cooling'] = name['mw_cSST'] - name['mw_bSST']
 name['clm_90_b8211'] = data_clm_90_b8211[name.index, 4]
 name['clm_90_b9221'] = data_clm_90_b9221[name.index, 4]
 
@@ -406,7 +419,11 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_ylabel('Probability density')
     ax.legend(loc='best')
     ax.grid(True, alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes, 
             fontsize=12, fontweight='bold', verticalalignment='top')
     stats.ks_2samp(lmi_nomhw.dropna(), lmi_wtmhw.dropna())
@@ -440,7 +457,11 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_ylabel('Probability density')
     ax.legend(loc='best')
     ax.grid(True, alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     stats.ks_2samp(lmi_nomhw.dropna(), lmi_wtmhw.dropna())
@@ -557,7 +578,11 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Lifetime maximum intensity (knots)')
     ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -592,7 +617,11 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Lifetime maximum intensity (knots)')
     ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -627,7 +656,11 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Intensity change (knots)')
     ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -662,7 +695,11 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Intensity change (knots)')
     ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -772,45 +809,57 @@ for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
     axes[1].text(bar.get_x() + bar.get_width()/2., height + err,
                  f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
-cl_nomhw_b8211 = name_nomhw_b8211[name_nomhw_b8211['bLMI']].groupby('name')['Cooling'].mean()
-cl_wtmhw_b8211 = name_wtmhw_b8211[name_wtmhw_b8211['bLMI']].groupby('name')['Cooling'].mean()
-nomhw_se = cl_nomhw_b8211.dropna().values.std() / np.sqrt(len(cl_nomhw_b8211.dropna().values))
-wtmhw_se = cl_wtmhw_b8211.dropna().values.std() / np.sqrt(len(cl_wtmhw_b8211.dropna().values))
-means = [cl_nomhw_b8211.dropna().values.mean(), cl_wtmhw_b8211.dropna().values.mean()]
+# cl_nomhw_b8211 = name_nomhw_b8211[name_nomhw_b8211['bLMI']].groupby('name')['mw_Cooling'].mean()
+# cl_wtmhw_b8211 = name_wtmhw_b8211[name_wtmhw_b8211['bLMI']].groupby('name')['mw_Cooling'].mean()
+dr_nomhw_b8211 = name_nomhw_b8211[name_nomhw_b8211['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+dr_wtmhw_b8211 = name_wtmhw_b8211[name_wtmhw_b8211['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+t_stat, p_value = stats.ttest_ind(dr_nomhw_b8211, dr_wtmhw_b8211, equal_var=False, nan_policy="omit", alternative="two-sided")
+print(f"T-statistic: {t_stat}")
+print(f"P-value: {p_value}")
+nomhw_se = dr_nomhw_b8211.dropna().values.std() / np.sqrt(len(dr_nomhw_b8211.dropna().values))
+wtmhw_se = dr_wtmhw_b8211.dropna().values.std() / np.sqrt(len(dr_wtmhw_b8211.dropna().values))
+means = [dr_nomhw_b8211.dropna().values.mean(), dr_wtmhw_b8211.dropna().values.mean()]
 errors = [nomhw_se, wtmhw_se]
 bars = axes[2].bar(x_pos, means, yerr=errors, capsize=10, color=colors,
                    alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
 axes[2].set_xticks(x_pos)
 axes[2].set_xticklabels(['No-MHW', 'With-MHW'])
-axes[2].set_ylabel('Sea surface temperature cooling (°C)')
+axes[2].set_ylabel('During-storm sea surface temperature (°C)')
 axes[2].grid(axis='y', alpha=0.3)
 axes[2].set_title('GL: MHW baseline 1982–2011')
 axes[2].text(0.02, 0.98, 'c', transform=axes[2].transAxes, fontsize=12, fontweight='bold',
-             verticalalignment='top', bbox=dict(boxstyle='square', facecolor='white', alpha=1, linewidth=0, pad=0.1))
+             verticalalignment='top')
+axes[2].set_ylim(25, 30)
 for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
     height = bar.get_height()
-    axes[2].text(bar.get_x() + bar.get_width()/2., height - err,
-                 f'{mean:.2f}', ha='center', va='top', fontsize=12, fontweight='bold')
+    axes[2].text(bar.get_x() + bar.get_width()/2., height + err,
+                 f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
-cl_nomhw_b9221 = name_nomhw_b9221[name_nomhw_b9221['bLMI']].groupby('name')['Cooling'].mean()
-cl_wtmhw_b9221 = name_wtmhw_b9221[name_wtmhw_b9221['bLMI']].groupby('name')['Cooling'].mean()
-nomhw_se = cl_nomhw_b9221.dropna().values.std() / np.sqrt(len(cl_nomhw_b9221.dropna().values))
-wtmhw_se = cl_wtmhw_b9221.dropna().values.std() / np.sqrt(len(cl_wtmhw_b9221.dropna().values))
-means = [cl_nomhw_b9221.dropna().values.mean(), cl_wtmhw_b9221.dropna().values.mean()]
+# cl_nomhw_b9221 = name_nomhw_b9221[name_nomhw_b9221['bLMI']].groupby('name')['mw_Cooling'].mean()
+# cl_wtmhw_b9221 = name_wtmhw_b9221[name_wtmhw_b9221['bLMI']].groupby('name')['mw_Cooling'].mean()
+dr_nomhw_b9221 = name_nomhw_b9221[name_nomhw_b9221['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+dr_wtmhw_b9221 = name_wtmhw_b9221[name_wtmhw_b9221['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+t_stat, p_value = stats.ttest_ind(dr_nomhw_b9221, dr_wtmhw_b9221, equal_var=False, nan_policy="omit", alternative="two-sided")
+print(f"T-statistic: {t_stat}")
+print(f"P-value: {p_value}")
+nomhw_se = dr_nomhw_b9221.dropna().values.std() / np.sqrt(len(dr_nomhw_b9221.dropna().values))
+wtmhw_se = dr_wtmhw_b9221.dropna().values.std() / np.sqrt(len(dr_wtmhw_b9221.dropna().values))
+means = [dr_nomhw_b9221.dropna().values.mean(), dr_wtmhw_b9221.dropna().values.mean()]
 errors = [nomhw_se, wtmhw_se]
 bars = axes[3].bar(x_pos, means, yerr=errors, capsize=10, color=colors,
                    alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
 axes[3].set_xticks(x_pos)
 axes[3].set_xticklabels(['No-MHW', 'With-MHW'])
-axes[3].set_ylabel('Sea surface temperature cooling (°C)')
+axes[3].set_ylabel('During-storm sea surface temperature (°C)')
 axes[3].grid(axis='y', alpha=0.3)
 axes[3].set_title('GL: MHW baseline 1992–2021')
 axes[3].text(0.02, 0.98, 'd', transform=axes[3].transAxes, fontsize=12, fontweight='bold',
-             verticalalignment='top', bbox=dict(boxstyle='square', facecolor='white', alpha=1, linewidth=0, pad=0.1))
+             verticalalignment='top')
+axes[3].set_ylim(25, 30)
 for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
     height = bar.get_height()
-    axes[3].text(bar.get_x() + bar.get_width()/2., height - err,
-                 f'{mean:.2f}', ha='center', va='top', fontsize=12, fontweight='bold')
+    axes[3].text(bar.get_x() + bar.get_width()/2., height + err,
+                 f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
 plt.tight_layout()
 output_file = "mhw_plot/Fig5.pdf"
@@ -838,7 +887,11 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Ratio of rapid-intensification TCs')
     ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -875,7 +928,11 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
     ax.set_ylabel('Ratio of rapid-intensification TCs')
     ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -898,25 +955,32 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax = axes[idx]
     basin_wtmhw = name_wtmhw_b8211[filter_func(name_wtmhw_b8211['name'])]
     basin_nomhw = name_nomhw_b8211[filter_func(name_nomhw_b8211['name'])]
-    cl_wtmhw = basin_wtmhw[basin_wtmhw['bLMI']].groupby('name')['Cooling'].mean()
-    cl_nomhw = basin_nomhw[basin_nomhw['bLMI']].groupby('name')['Cooling'].mean()
-    nomhw_se = cl_nomhw.dropna().values.std() / np.sqrt(len(cl_nomhw.dropna().values))
-    wtmhw_se = cl_wtmhw.dropna().values.std() / np.sqrt(len(cl_wtmhw.dropna().values))
-    means    = [cl_nomhw.dropna().values.mean(), cl_wtmhw.dropna().values.mean()]
+    # cl_wtmhw = basin_wtmhw[basin_wtmhw['bLMI']].groupby('name')['mw_Cooling'].mean()
+    # cl_nomhw = basin_nomhw[basin_nomhw['bLMI']].groupby('name')['mw_Cooling'].mean()
+    dr_wtmhw = basin_wtmhw[basin_wtmhw['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+    dr_nomhw = basin_nomhw[basin_nomhw['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+    nomhw_se = dr_nomhw.dropna().values.std() / np.sqrt(len(dr_nomhw.dropna().values))
+    wtmhw_se = dr_wtmhw.dropna().values.std() / np.sqrt(len(dr_wtmhw.dropna().values))
+    means    = [dr_nomhw.dropna().values.mean(), dr_wtmhw.dropna().values.mean()]
     errors   = [nomhw_se, wtmhw_se]
     bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
                   alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
     ax.set_xticks(x_pos)
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
-    ax.set_ylabel('Sea surface temperature cooling (°C)')
+    ax.set_ylabel('During-storm sea surface temperature (°C)')
     ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
-            fontsize=12, fontweight='bold', verticalalignment='top', bbox=dict(boxstyle='square', facecolor='white', alpha=1, linewidth=0, pad=0.1))
+            fontsize=12, fontweight='bold', verticalalignment='top')
+    ax.set_ylim(25, 30)
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
         height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2., height - err,
-                f'{mean:.2f}', ha='center', va='top', fontsize=12, fontweight='bold')
+        ax.text(bar.get_x() + bar.get_width()/2., height + err,
+                f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
 
     
@@ -933,25 +997,32 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax = axes[idx]
     basin_wtmhw = name_wtmhw_b9221[filter_func(name_wtmhw_b9221['name'])]
     basin_nomhw = name_nomhw_b9221[filter_func(name_nomhw_b9221['name'])]
-    cl_wtmhw = basin_wtmhw[basin_wtmhw['bLMI']].groupby('name')['Cooling'].mean()
-    cl_nomhw = basin_nomhw[basin_nomhw['bLMI']].groupby('name')['Cooling'].mean()
-    nomhw_se = cl_nomhw.dropna().values.std() / np.sqrt(len(cl_nomhw.dropna().values))
-    wtmhw_se = cl_wtmhw.dropna().values.std() / np.sqrt(len(cl_wtmhw.dropna().values))
-    means    = [cl_nomhw.dropna().values.mean(), cl_wtmhw.dropna().values.mean()]
+    # cl_wtmhw = basin_wtmhw[basin_wtmhw['bLMI']].groupby('name')['mw_Cooling'].mean()
+    # cl_nomhw = basin_nomhw[basin_nomhw['bLMI']].groupby('name')['mw_Cooling'].mean()
+    dr_wtmhw = basin_wtmhw[basin_wtmhw['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+    dr_nomhw = basin_nomhw[basin_nomhw['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+    nomhw_se = dr_nomhw.dropna().values.std() / np.sqrt(len(dr_nomhw.dropna().values))
+    wtmhw_se = dr_wtmhw.dropna().values.std() / np.sqrt(len(dr_wtmhw.dropna().values))
+    means    = [dr_nomhw.dropna().values.mean(), dr_wtmhw.dropna().values.mean()]
     errors   = [nomhw_se, wtmhw_se]
     bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
                   alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
     ax.set_xticks(x_pos)
     ax.set_xticklabels(['No-MHW', 'With-MHW'])
-    ax.set_ylabel('Sea surface temperature cooling (°C)')
+    ax.set_ylabel('During-storm sea surface temperature (°C)')
     ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
-            fontsize=12, fontweight='bold', verticalalignment='top', bbox=dict(boxstyle='square', facecolor='white', alpha=1, linewidth=0, pad=0.1))
+            fontsize=12, fontweight='bold', verticalalignment='top')
+    ax.set_ylim(25, 30)
     for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
         height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2., height - err,
-                f'{mean:.2f}', ha='center', va='top', fontsize=12, fontweight='bold')
+        ax.text(bar.get_x() + bar.get_width()/2., height + err,
+                f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
 
 
@@ -1081,7 +1152,11 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xlabel('Number of MHW encounters')
     ax.set_ylabel('Lifetime maximum intensity (knots)')
     ax.grid(True, alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
 
@@ -1118,7 +1193,11 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_xlabel('Number of MHW encounters')
     ax.set_ylabel('Lifetime maximum intensity (knots)')
     ax.grid(True, alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
 
@@ -1215,7 +1294,11 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_ylabel('TC number')
     ax.legend(loc='upper right')
     ax.grid(True, alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
 
@@ -1251,7 +1334,11 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax.set_ylabel('TC number')
     ax.legend(loc='upper right')
     ax.grid(True, alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
             fontsize=12, fontweight='bold', verticalalignment='top')
 

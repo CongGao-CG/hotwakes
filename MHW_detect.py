@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
@@ -154,6 +155,9 @@ ax2_temp.set_ylabel('Threshold exceedance(°C)', color='red')
 ax2_temp.tick_params(axis='y', labelcolor='red', colors='red')
 ax2_temp.spines['right'].set_color('red')
 plt.tight_layout()
+output_file = "mhw_plot_pkl/Fig1.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/Fig1.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -345,6 +349,9 @@ for code, basin_entry in basins.items():
 fig.text(0.25, 0.24, "Outer ring: MHW baseline 1982–2011", ha='left', va='top', fontsize=9)
 fig.text(0.25, 0.20, "Inner ring: MHW baseline 1992–2021", ha='left', va='top', fontsize=9)
 
+output_file = "mhw_plot_pkl/Fig2.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/Fig2.pdf"
 fig.savefig(output_file, bbox_inches="tight")
 plt.close(fig)
@@ -382,6 +389,9 @@ ax2.set_title('GL: MHW baseline 1992–2021')
 ax2.text(0.02, 0.98, 'b', transform=ax2.transAxes, fontsize=12, fontweight='bold',
          verticalalignment='top')
 plt.tight_layout()
+output_file = "mhw_plot_pkl/Fig3.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/Fig3.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -430,6 +440,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS1.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS1.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -468,6 +481,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS2.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS2.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -554,6 +570,9 @@ for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
                  f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
 plt.tight_layout()
+output_file = "mhw_plot_pkl/Fig4.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/Fig4.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -593,6 +612,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS3.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS3.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -632,6 +654,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS4.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS4.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -671,6 +696,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS5.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS5.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -710,6 +738,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS6.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS6.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -861,6 +892,9 @@ for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
                  f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
 plt.tight_layout()
+output_file = "mhw_plot_pkl/Fig5.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/Fig5.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -902,6 +936,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS7.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS7.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -943,6 +980,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS8.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS8.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -985,6 +1025,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS9.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS9.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -1027,6 +1070,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS10.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS10.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -1121,6 +1167,9 @@ axes[3].text(0.02, 0.98, 'd', transform=axes[3].transAxes, fontsize=12, fontweig
              verticalalignment='top')
 """
 plt.tight_layout()
+output_file = "mhw_plot_pkl/Fig6.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/Fig6.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -1162,6 +1211,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS11.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS11.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -1203,6 +1255,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS12.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS12.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -1264,6 +1319,9 @@ axes[1].text(0.02, 0.98, 'a', transform=axes[1].transAxes, fontsize=12, fontweig
              verticalalignment='top')
 
 plt.tight_layout()
+output_file = "mhw_plot_pkl/Fig7.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/Fig7.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -1304,6 +1362,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS13.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS13.pdf"
 plt.savefig(output_file)
 plt.close()
@@ -1344,6 +1405,9 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 plt.tight_layout()
+output_file = "mhw_plot_pkl/FigS14.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
 output_file = "mhw_plot/FigS14.pdf"
 plt.savefig(output_file)
 plt.close()
