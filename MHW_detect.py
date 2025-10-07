@@ -154,13 +154,13 @@ ax2_temp.bar(milton_data['time'], milton_data['MHWi'],
 ax2_temp.set_ylabel('Threshold exceedance(°C)', color='red')
 ax2_temp.tick_params(axis='y', labelcolor='red', colors='red')
 ax2_temp.spines['right'].set_color('red')
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/Fig1.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/Fig1.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 has_mhw_b8211 = name[(name['bLMI'] == True) & (abs(name['lat']) <= 30)].groupby('name')['MHW_b8211'].sum()
@@ -388,13 +388,13 @@ ax2.grid(True, alpha=0.3)
 ax2.set_title('GL: MHW baseline 1992–2021')
 ax2.text(0.02, 0.98, 'b', transform=ax2.transAxes, fontsize=12, fontweight='bold',
          verticalalignment='top')
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/Fig3.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/Fig3.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 stats.ks_2samp(lmi_nomhw_b8211.dropna(), lmi_wtmhw_b8211.dropna())
 stats.ks_2samp(lmi_nomhw_b9221.dropna(), lmi_wtmhw_b9221.dropna())
@@ -439,13 +439,13 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS1.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS1.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 3, figsize=(10, 5))
@@ -480,13 +480,13 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS2.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS2.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 2, figsize=(6, 9))
@@ -569,13 +569,13 @@ for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
     axes[3].text(bar.get_x() + bar.get_width()/2., height + err,
                  f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/Fig4.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/Fig4.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 3, figsize=(10, 9))
@@ -611,13 +611,13 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS3.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS3.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 3, figsize=(10, 9))
@@ -653,13 +653,13 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS4.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS4.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 3, figsize=(10, 9))
@@ -695,13 +695,13 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS5.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS5.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 3, figsize=(10, 9))
@@ -737,13 +737,13 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS6.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS6.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 """
@@ -767,7 +767,7 @@ for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
     ax.text(bar.get_x() + bar.get_width()/2., height + err,
             f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
-plt.tight_layout()
+fig.tight_layout()
 plt.show()
 """
 
@@ -891,13 +891,13 @@ for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
     axes[3].text(bar.get_x() + bar.get_width()/2., height + err,
                  f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/Fig5.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/Fig5.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 3, figsize=(10, 9))
@@ -935,13 +935,13 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS7.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS7.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 3, figsize=(10, 9))
@@ -979,13 +979,13 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS8.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS8.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 3, figsize=(10, 9))
@@ -1024,13 +1024,13 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
     
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS9.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS9.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 3, figsize=(10, 9))
@@ -1069,13 +1069,13 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS10.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS10.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(1, 2, figsize=(7, 4.5))
@@ -1166,13 +1166,13 @@ axes[3].set_title('GL: MHW baseline 1992–2021')
 axes[3].text(0.02, 0.98, 'd', transform=axes[3].transAxes, fontsize=12, fontweight='bold',
              verticalalignment='top')
 """
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/Fig6.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/Fig6.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 3, figsize=(10, 9))
@@ -1210,13 +1210,13 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS11.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS11.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 3, figsize=(10, 9))
@@ -1254,13 +1254,13 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS12.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS12.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 def count_indices_by_year(index_list, start_year=1982, end_year=2024):
@@ -1318,13 +1318,13 @@ axes[1].set_title('GL: MHW baseline 1992–2021')
 axes[1].text(0.02, 0.98, 'a', transform=axes[1].transAxes, fontsize=12, fontweight='bold',
              verticalalignment='top')
 
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/Fig7.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/Fig7.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 3, figsize=(10, 9))
@@ -1361,13 +1361,13 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS13.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS13.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
 
 fig, axes = plt.subplots(2, 3, figsize=(10, 9))
@@ -1404,11 +1404,11 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 
 fig.delaxes(axes[5])
-plt.tight_layout()
+fig.tight_layout()
 output_file = "mhw_plot_pkl/FigS14.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
 output_file = "mhw_plot/FigS14.pdf"
-plt.savefig(output_file)
-plt.close()
+fig.savefig(output_file)
+plt.close(fig)
 subprocess.run(['open', output_file])
