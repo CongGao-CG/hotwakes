@@ -151,7 +151,7 @@ ax2.set_zorder(1)
 ax2.patch.set_alpha(0)
 ax2_temp.bar(milton_data['time'], milton_data['MHWi'], 
              color='red', alpha=0.6, width=0.1)
-ax2_temp.set_ylabel('Threshold exceedance(°C)', color='red')
+ax2_temp.set_ylabel('Threshold exceedance (°C)', color='red')
 ax2_temp.tick_params(axis='y', labelcolor='red', colors='red')
 ax2_temp.spines['right'].set_color('red')
 fig.tight_layout()
@@ -570,10 +570,10 @@ for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
                  f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
 fig.tight_layout()
-output_file = "mhw_plot_pkl/Fig4.pkl"
+output_file = "mhw_plot_pkl/FigS3.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/Fig4.pdf"
+output_file = "mhw_plot/FigS3.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
@@ -599,48 +599,6 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     if basin_code == 'AL':
         basin_code = 'NA'
     ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
-    if basin_code == 'NA':
-        basin_code = 'AL'
-    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
-            fontsize=12, fontweight='bold', verticalalignment='top')
-    for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
-        height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2., height + err,
-                f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
-
-
-
-fig.delaxes(axes[5])
-fig.tight_layout()
-output_file = "mhw_plot_pkl/FigS3.pkl"
-with open(output_file, 'wb') as f:
-    pickle.dump(fig, f)
-output_file = "mhw_plot/FigS3.pdf"
-fig.savefig(output_file)
-plt.close(fig)
-subprocess.run(['open', output_file])
-
-fig, axes = plt.subplots(2, 3, figsize=(10, 9))
-axes = axes.flatten()
-for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
-    ax = axes[idx]
-    basin_wtmhw = name_wtmhw_b9221[filter_func(name_wtmhw_b9221['name'])]
-    basin_nomhw = name_nomhw_b9221[filter_func(name_nomhw_b9221['name'])]
-    lmi_wtmhw = basin_wtmhw.groupby('name')['LMI'].max()
-    lmi_nomhw = basin_nomhw.groupby('name')['LMI'].max()
-    nomhw_se = lmi_nomhw.dropna().values.std() / np.sqrt(len(lmi_nomhw.dropna().values))
-    wtmhw_se = lmi_wtmhw.dropna().values.std() / np.sqrt(len(lmi_wtmhw.dropna().values))
-    means    = [lmi_nomhw.dropna().values.mean(), lmi_wtmhw.dropna().values.mean()]
-    errors   = [nomhw_se, wtmhw_se]
-    bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
-                  alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
-    ax.set_xticks(x_pos)
-    ax.set_xticklabels(['No-MHW', 'With-MHW'])
-    ax.set_ylabel('Lifetime maximum intensity (knots)')
-    ax.grid(axis='y', alpha=0.3)
-    if basin_code == 'AL':
-        basin_code = 'NA'
-    ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
     if basin_code == 'NA':
         basin_code = 'AL'
     ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
@@ -666,6 +624,48 @@ fig, axes = plt.subplots(2, 3, figsize=(10, 9))
 axes = axes.flatten()
 for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     ax = axes[idx]
+    basin_wtmhw = name_wtmhw_b9221[filter_func(name_wtmhw_b9221['name'])]
+    basin_nomhw = name_nomhw_b9221[filter_func(name_nomhw_b9221['name'])]
+    lmi_wtmhw = basin_wtmhw.groupby('name')['LMI'].max()
+    lmi_nomhw = basin_nomhw.groupby('name')['LMI'].max()
+    nomhw_se = lmi_nomhw.dropna().values.std() / np.sqrt(len(lmi_nomhw.dropna().values))
+    wtmhw_se = lmi_wtmhw.dropna().values.std() / np.sqrt(len(lmi_wtmhw.dropna().values))
+    means    = [lmi_nomhw.dropna().values.mean(), lmi_wtmhw.dropna().values.mean()]
+    errors   = [nomhw_se, wtmhw_se]
+    bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                  alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(['No-MHW', 'With-MHW'])
+    ax.set_ylabel('Lifetime maximum intensity (knots)')
+    ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+    for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + err,
+                f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS5.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS5.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 9))
+axes = axes.flatten()
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
     basin_wtmhw = name_wtmhw_b8211[filter_func(name_wtmhw_b8211['name'])]
     basin_nomhw = name_nomhw_b8211[filter_func(name_nomhw_b8211['name'])]
     ic_wtmhw = basin_wtmhw.groupby('name')['IC'].max()
@@ -696,10 +696,10 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 fig.tight_layout()
-output_file = "mhw_plot_pkl/FigS5.pkl"
+output_file = "mhw_plot_pkl/FigS6.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/FigS5.pdf"
+output_file = "mhw_plot/FigS6.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
@@ -738,10 +738,10 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 fig.tight_layout()
-output_file = "mhw_plot_pkl/FigS6.pkl"
+output_file = "mhw_plot_pkl/FigS7.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/FigS6.pdf"
+output_file = "mhw_plot/FigS7.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
@@ -759,7 +759,7 @@ colors = [COLOR_NO, COLOR_WITH]
 bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
                alpha=0.7, edgecolor='black', linewidth=2)
 ax.set_xticks(x_pos)
-ax.set_xticklabels(['No MHW', 'With MHW'])
+ax.set_xticklabels(['No-MHW', 'With-MHW'])
 ax.set_ylabel('Intensification rate (kt/day)', fontsize=12)
 ax.grid(axis='y', alpha=0.3)
 for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
@@ -892,10 +892,10 @@ for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
                  f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
 fig.tight_layout()
-output_file = "mhw_plot_pkl/Fig5.pkl"
+output_file = "mhw_plot_pkl/Fig4.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/Fig5.pdf"
+output_file = "mhw_plot/Fig4.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
@@ -936,10 +936,10 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 fig.tight_layout()
-output_file = "mhw_plot_pkl/FigS7.pkl"
+output_file = "mhw_plot_pkl/FigS8.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/FigS7.pdf"
+output_file = "mhw_plot/FigS8.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
@@ -980,10 +980,10 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 fig.tight_layout()
-output_file = "mhw_plot_pkl/FigS8.pkl"
+output_file = "mhw_plot_pkl/FigS9.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/FigS8.pdf"
+output_file = "mhw_plot/FigS9.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
@@ -1025,10 +1025,10 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
     
 fig.delaxes(axes[5])
 fig.tight_layout()
-output_file = "mhw_plot_pkl/FigS9.pkl"
+output_file = "mhw_plot_pkl/FigS10.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/FigS9.pdf"
+output_file = "mhw_plot/FigS10.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
@@ -1070,10 +1070,10 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 fig.tight_layout()
-output_file = "mhw_plot_pkl/FigS10.pkl"
+output_file = "mhw_plot_pkl/FigS11.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/FigS10.pdf"
+output_file = "mhw_plot/FigS11.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
@@ -1167,10 +1167,10 @@ axes[3].text(0.02, 0.98, 'd', transform=axes[3].transAxes, fontsize=12, fontweig
              verticalalignment='top')
 """
 fig.tight_layout()
-output_file = "mhw_plot_pkl/Fig6.pkl"
+output_file = "mhw_plot_pkl/FigS12.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/Fig6.pdf"
+output_file = "mhw_plot/FigS12.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
@@ -1211,10 +1211,10 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 fig.tight_layout()
-output_file = "mhw_plot_pkl/FigS11.pkl"
+output_file = "mhw_plot_pkl/FigS13.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/FigS11.pdf"
+output_file = "mhw_plot/FigS13.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
@@ -1255,10 +1255,10 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 fig.tight_layout()
-output_file = "mhw_plot_pkl/FigS12.pkl"
+output_file = "mhw_plot_pkl/FigS14.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/FigS12.pdf"
+output_file = "mhw_plot/FigS14.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
@@ -1315,14 +1315,14 @@ axes[1].set_ylabel('TC number')
 axes[1].legend(loc='best')
 axes[1].grid(True, alpha=0.3)
 axes[1].set_title('GL: MHW baseline 1992–2021')
-axes[1].text(0.02, 0.98, 'a', transform=axes[1].transAxes, fontsize=12, fontweight='bold',
+axes[1].text(0.02, 0.98, 'b', transform=axes[1].transAxes, fontsize=12, fontweight='bold',
              verticalalignment='top')
 
 fig.tight_layout()
-output_file = "mhw_plot_pkl/Fig7.pkl"
+output_file = "mhw_plot_pkl/Fig5.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/Fig7.pdf"
+output_file = "mhw_plot/Fig5.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
@@ -1362,10 +1362,10 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 fig.tight_layout()
-output_file = "mhw_plot_pkl/FigS13.pkl"
+output_file = "mhw_plot_pkl/FigS15.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/FigS13.pdf"
+output_file = "mhw_plot/FigS15.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
@@ -1405,10 +1405,10 @@ for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
 
 fig.delaxes(axes[5])
 fig.tight_layout()
-output_file = "mhw_plot_pkl/FigS14.pkl"
+output_file = "mhw_plot_pkl/FigS16.pkl"
 with open(output_file, 'wb') as f:
     pickle.dump(fig, f)
-output_file = "mhw_plot/FigS14.pdf"
+output_file = "mhw_plot/FigS16.pdf"
 fig.savefig(output_file)
 plt.close(fig)
 subprocess.run(['open', output_file])
