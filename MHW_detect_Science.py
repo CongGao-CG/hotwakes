@@ -1,0 +1,1414 @@
+import pickle
+import numpy as np
+import xarray as xr
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from matplotlib.patches import Wedge, Patch, Rectangle
+import cartopy.crs as ccrs
+import cartopy.feature as cfeature
+import os
+import subprocess
+from scipy import stats
+from pathlib import Path
+from diptest import diptest
+from collections import Counter
+from sst_loader import load_windows
+from doy import get_day_of_year_365
+
+data, name = load_windows(Path('t_data'), with_date=False, with_name=True, only_TSHU_status=False)
+name = name.reset_index(drop=True)
+
+data_temp = np.load('t_data/mw_501.npy').reshape(-1, 31)
+mw_name = name.copy()
+mw_name['btime'] = mw_name.groupby('name')['time'].transform('min')
+mw_data = np.empty_like(data) * np.nan
+mw_data[mw_name['btime'] >= '1998-01-16 00:00:00'] = data_temp
+
+bdata = data[:, 5:12].mean(axis=1)
+mw_bdata = mw_data[:, 5:12].mean(axis=1)
+data = data[:, 11:20]
+mw_data = mw_data[:, 11:20]
+
+# duplicate CP022022 and CP032002
+name = name.drop(index=range(21167, 21188)).drop(index=range(21489, 21532))
+# only 0 6 12 18
+name = name.loc[(name['time'].dt.hour.isin([0, 6, 12, 18]) & name['time'].dt.minute.eq(0) & name['time'].dt.second.eq(0))]
+# calculate time difference
+name['dt'] = name.groupby('name')['time'].diff().dt.total_seconds().div(3600).astype('float64')
+# drop dt = 246
+name = name.drop(index=range(45522, 45523))
+# drop dt = 24
+name = name.drop(index=range(64799, 64800))
+
+name['bgen'] = (name['wind'] >= 35)
+name['bgen'] = (name.groupby('name')['bgen'].cumsum() == 0)
+name = name[name['bgen'] == False]
+name = name.drop('dt', axis=1)
+name['dt'] = name.groupby('name')['time'].diff().dt.total_seconds().div(3600).astype('float64')
+
+name['lon'] = (name['lon'] + 360) % 360
+name['lon'] = round(name['lon'], 1)
+name['lon_grid'] = round((name['lon'] + 0.125) * 4) / 4 - 0.125
+name['lon_grid'] = abs(name['lon_grid'])
+name['lat_grid'] = round((name['lat'] + 0.125) * 4) / 4 - 0.125
+name['doy0'] = get_day_of_year_365(name['time'])
+name['doy-4'] = (name['doy0'] - 4 + 365) % 365
+name['doy-3'] = (name['doy0'] - 3 + 365) % 365
+name['doy-2'] = (name['doy0'] - 2 + 365) % 365
+name['doy-1'] = (name['doy0'] - 1 + 365) % 365
+name['doy1'] = (name['doy0'] + 1 + 365) % 365
+name['doy2'] = (name['doy0'] + 2 + 365) % 365
+name['doy3'] = (name['doy0'] + 3 + 365) % 365
+name['doy4'] = (name['doy0'] + 4 + 365) % 365
+
+name['LMI'] = name.groupby('name')['wind'].transform('max')
+columns = ['name', 'lon', 'lat', 'lon_grid', 'lat_grid', 'time', 'dt', 'wind', 'LMI',
+           'doy-4', 'doy-3', 'doy-2', 'doy-1', 'doy0', 'doy1', 'doy2', 'doy3', 'doy4']
+name = name[columns]
+
+clm_90_b8211 = xr.open_dataset('/Volumes/Back4SJTU/OISST/clm_90_0.1_359.9_-80.1_80.1_1982_2011.nc')['sst_90th_percentile']
+clm_90_b9221 = xr.open_dataset('/Volumes/Back4SJTU/OISST/clm_90_0.1_359.9_-80.1_80.1_1992_2021.nc')['sst_90th_percentile']
+
+doy_columns = columns[-9:]
+data_clm_90_b8211 = np.zeros(data.shape)
+data_clm_90_b9221 = np.zeros(data.shape)
+for i, row in name.iterrows():
+    lon = row['lon_grid']
+    lat = row['lat_grid']
+    for j, doy_col in enumerate(doy_columns):
+        doy = row[doy_col]
+        data_clm_90_b8211[i, j] = clm_90_b8211.sel(lon=lon, lat=lat, day_of_year=doy + 1).values
+        data_clm_90_b9221[i, j] = clm_90_b9221.sel(lon=lon, lat=lat, day_of_year=doy + 1).values
+
+r0_b8211 = np.all(data[name.index, 0:5] >= data_clm_90_b8211[name.index, 0:5], axis=1)
+r1_b8211 = np.all(data[name.index, 1:6] >= data_clm_90_b8211[name.index, 1:6], axis=1)
+r2_b8211 = np.all(data[name.index, 2:7] >= data_clm_90_b8211[name.index, 2:7], axis=1)
+r3_b8211 = np.all(data[name.index, 3:8] >= data_clm_90_b8211[name.index, 3:8], axis=1)
+r4_b8211 = np.all(data[name.index, 4:9] >= data_clm_90_b8211[name.index, 4:9], axis=1)
+r_b8211  = r0_b8211 | r1_b8211 | r2_b8211 | r3_b8211 | r4_b8211
+name['MHW_b8211'] = r_b8211
+r0_b9221 = np.all(data[name.index, 0:5] >= data_clm_90_b9221[name.index, 0:5], axis=1)
+r1_b9221 = np.all(data[name.index, 1:6] >= data_clm_90_b9221[name.index, 1:6], axis=1)
+r2_b9221 = np.all(data[name.index, 2:7] >= data_clm_90_b9221[name.index, 2:7], axis=1)
+r3_b9221 = np.all(data[name.index, 3:8] >= data_clm_90_b9221[name.index, 3:8], axis=1)
+r4_b9221 = np.all(data[name.index, 4:9] >= data_clm_90_b9221[name.index, 4:9], axis=1)
+r_b9221  = r0_b9221 | r1_b9221 | r2_b9221 | r3_b9221 | r4_b9221
+name['MHW_b9221'] = r_b9221
+
+name['eLMI'] = (name['wind'] == name['LMI'])
+name['bLMI'] = (name.groupby('name')['eLMI'].cumsum() == 0)
+
+name['IC'] = name['LMI'] - name.groupby('name')['wind'].transform('first')
+name['IT'] = name.groupby('name')['dt'].transform(lambda x: x[name.loc[x.index, 'bLMI'].shift(1) == True].sum())
+name.loc[(name['IT'] == 0), 'IT'] = np.nan
+name['IR'] = name['IC'] / name['IT'] * 4
+name['bSST'] = bdata[name.index] 
+name['mw_bSST'] = mw_bdata[name.index] 
+name['cSST'] = data[name.index, 4] 
+name['mw_cSST'] = mw_data[name.index, 4] 
+name['Cooling'] = name['cSST'] - name['bSST']
+name['mw_Cooling'] = name['mw_cSST'] - name['mw_bSST']
+name['clm_90_b8211'] = data_clm_90_b8211[name.index, 4]
+name['clm_90_b9221'] = data_clm_90_b9221[name.index, 4]
+
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(5, 7))
+beryl_data = name[name['name'] == 'AL022024'][0:25]
+beryl_data['MHWi'] = beryl_data['cSST'] - beryl_data['clm_90_b8211']
+beryl_data.loc[beryl_data['MHW_b8211'] == False, 'MHWi'] = np.nan
+ax1.plot(beryl_data['time'], beryl_data['wind'], 'k.-', markersize=8, linewidth=1)
+# ax1.set_xlabel('Time')
+ax1.set_ylabel('TC Intensity (knots)')
+ax1.set_title('Hurricane Beryl (2024)')
+ax1.text(0.02, 0.98, 'A', transform=ax1.transAxes, fontsize=12, fontweight='bold',
+         verticalalignment='top')
+ax1.grid(True, alpha=0.3)
+ax1.xaxis.set_major_locator(mdates.DayLocator())
+ax1.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+ax1_temp = ax1.twinx()
+ax1_temp.set_zorder(0)
+ax1.set_zorder(1)
+ax1.patch.set_alpha(0)
+ax1_temp.bar(beryl_data['time'], beryl_data['MHWi'], 
+             color='red', alpha=0.6, width=0.1)
+ax1_temp.set_ylabel('Threshold exceedance (°C)', color='red')
+ax1_temp.tick_params(axis='y', labelcolor='red', colors='red')
+ax1_temp.spines['right'].set_color('red')
+milton_data = name[name['name'] == 'AL142024'][0:18]
+milton_data['MHWi'] = milton_data['cSST'] - milton_data['clm_90_b8211']
+milton_data.loc[milton_data['MHW_b8211'] == False, 'MHWi'] = np.nan
+ax2.plot(milton_data['time'], milton_data['wind'], 'k.-', markersize=8, linewidth=1)
+# ax2.set_xlabel('Time')
+ax2.set_ylabel('TC Intensity (knots)')
+ax2.set_title('Hurricane Milton (2024)')
+ax2.text(0.02, 0.98, 'B', transform=ax2.transAxes, fontsize=12, fontweight='bold',
+         verticalalignment='top')
+ax2.grid(True, alpha=0.3)
+ax2.xaxis.set_major_locator(mdates.DayLocator())
+ax2.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+ax2_temp = ax2.twinx()
+ax2_temp.set_zorder(0)
+ax2.set_zorder(1)
+ax2.patch.set_alpha(0)
+ax2_temp.bar(milton_data['time'], milton_data['MHWi'], 
+             color='red', alpha=0.6, width=0.1)
+ax2_temp.set_ylabel('Threshold exceedance (°C)', color='red')
+ax2_temp.tick_params(axis='y', labelcolor='red', colors='red')
+ax2_temp.spines['right'].set_color('red')
+fig.tight_layout()
+output_file = "mhw_plot_pkl/Fig1_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/Fig1_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+has_mhw_b8211 = name[(name['bLMI'] == True) & (abs(name['lat']) <= 30)].groupby('name')['MHW_b8211'].sum()
+name_wtmhw_b8211 = name[name['name'].isin(has_mhw_b8211[has_mhw_b8211 > 0].index)]
+name_nomhw_b8211 = name[~name['name'].isin(has_mhw_b8211[has_mhw_b8211 > 0].index)]
+
+has_mhw_b9221 = name[(name['bLMI'] == True) & (abs(name['lat']) <= 30)].groupby('name')['MHW_b9221'].sum()
+name_wtmhw_b9221 = name[name['name'].isin(has_mhw_b9221[has_mhw_b9221 > 0].index)]
+name_nomhw_b9221 = name[~name['name'].isin(has_mhw_b9221[has_mhw_b9221 > 0].index)]
+
+lmi_wtmhw_b8211 = name_wtmhw_b8211.groupby('name')['LMI'].max()
+lmi_nomhw_b8211 = name_nomhw_b8211.groupby('name')['LMI'].max()
+
+lmi_wtmhw_b9221 = name_wtmhw_b9221.groupby('name')['LMI'].max()
+lmi_nomhw_b9221 = name_nomhw_b9221.groupby('name')['LMI'].max()
+
+basins = {
+    "AL": {"lon": -60.0,  "lat": 30.0,  "total": np.nan,  "with_8211": np.nan, "with_9221":  np.nan},
+    "EP": {"lon": -110.0, "lat": 20.0,  "total": np.nan,  "with_8211": np.nan, "with_9221": np.nan},
+    "SH": {"lon": 140.0,  "lat": -22.0, "total": np.nan, "with_8211": np.nan, "with_9221": np.nan},
+    "IO": {"lon": 75.0,   "lat": 12.0,  "total": np.nan,  "with_8211":  np.nan, "with_9221":  np.nan},
+    "WP": {"lon": 135.0,  "lat": 25.0,  "total": np.nan, "with_8211": np.nan, "with_9221": np.nan},
+}
+basins['AL']['total'] = lmi_wtmhw_b8211.index.str.startswith('AL').sum() + lmi_nomhw_b8211.index.str.startswith('AL').sum()
+basins['EP']['total'] = lmi_wtmhw_b8211.index.str.startswith('EP').sum() + lmi_nomhw_b8211.index.str.startswith('EP').sum() + lmi_wtmhw_b8211.index.str.startswith('CP').sum() + lmi_nomhw_b8211.index.str.startswith('CP').sum()
+basins['SH']['total'] = lmi_wtmhw_b8211.index.str.startswith('SH').sum() + lmi_nomhw_b8211.index.str.startswith('SH').sum()
+basins['IO']['total'] = lmi_wtmhw_b8211.index.str.startswith('IO').sum() + lmi_nomhw_b8211.index.str.startswith('IO').sum()
+basins['WP']['total'] = lmi_wtmhw_b8211.index.str.startswith('WP').sum() + lmi_nomhw_b8211.index.str.startswith('WP').sum()
+basins['AL']['with_8211'] = lmi_wtmhw_b8211.index.str.startswith('AL').sum()
+basins['EP']['with_8211'] = lmi_wtmhw_b8211.index.str.startswith('EP').sum() + lmi_wtmhw_b8211.index.str.startswith('CP').sum()
+basins['SH']['with_8211'] = lmi_wtmhw_b8211.index.str.startswith('SH').sum()
+basins['IO']['with_8211'] = lmi_wtmhw_b8211.index.str.startswith('IO').sum()
+basins['WP']['with_8211'] = lmi_wtmhw_b8211.index.str.startswith('WP').sum()
+basins['AL']['with_9221'] = lmi_wtmhw_b9221.index.str.startswith('AL').sum()
+basins['EP']['with_9221'] = lmi_wtmhw_b9221.index.str.startswith('EP').sum() + lmi_wtmhw_b9221.index.str.startswith('CP').sum()
+basins['SH']['with_9221'] = lmi_wtmhw_b9221.index.str.startswith('SH').sum()
+basins['IO']['with_9221'] = lmi_wtmhw_b9221.index.str.startswith('IO').sum()
+basins['WP']['with_9221'] = lmi_wtmhw_b9221.index.str.startswith('WP').sum()
+global_totals = {"total": lmi_wtmhw_b8211.shape[0] + lmi_nomhw_b8211.shape[0],
+                 "with_8211": lmi_wtmhw_b8211.shape[0],
+                 "with_9221": lmi_wtmhw_b9221.shape[0]}
+
+cycle_cols = plt.rcParams['axes.prop_cycle'].by_key().get('color', ['C0', 'C1'])
+COLOR_NO = cycle_cols[0]
+COLOR_WITH = cycle_cols[1]
+
+FIG_SIZE = (10, 5.5)
+CENTER_X, CENTER_Y = 0.5, 0.5
+OUTER_RADIUS = 0.34
+MIDDLE_RADIUS = 0.26
+INNER_RADIUS = 0.18
+TEXT_OFFSET = 0.09
+
+
+fig = plt.figure(figsize=FIG_SIZE)
+ax = fig.add_subplot(1, 1, 1, projection=ccrs.EqualEarth())
+ax.set_global()
+ax.add_feature(cfeature.LAND.with_scale("110m"), facecolor="0.92", edgecolor="none", zorder=1)
+ax.coastlines(linewidth=0.5, color="0.5", zorder=2)
+
+mask = Rectangle((0, 0), 1, 1, transform=ax.transAxes, facecolor="white", alpha=0.3, zorder=3)
+ax.add_patch(mask)
+
+plate_carree = ccrs.PlateCarree()
+
+legend_handles = [
+    Patch(facecolor=COLOR_WITH, edgecolor="k", linewidth=0.6, label="With-MHW"),
+    Patch(facecolor=COLOR_NO, edgecolor="k", linewidth=0.6, label="No-MHW"),
+]
+ax.legend(handles=legend_handles,
+          bbox_to_anchor=(0.70, 0.90),
+          loc="center",
+          frameon=False,
+          fontsize=9)
+
+global_total = global_totals["total"]
+global_with_8211 = global_totals["with_8211"]
+global_with_9221 = global_totals["with_9221"]
+global_frac_8211 = global_with_8211 / global_total
+global_frac_9221 = global_with_9221 / global_total
+
+global_inset = ax.inset_axes([0.38, 0.18, 0.18, 0.3], transform=ax.transAxes)
+global_inset.set_facecolor("none")
+global_inset.set_xlim(0, 1)
+global_inset.set_ylim(0, 1)
+global_inset.set_aspect("equal")
+global_inset.set_xticks([])
+global_inset.set_yticks([])
+for spine in global_inset.spines.values():
+    spine.set_visible(False)
+
+theta_with_8211 = 360.0 * global_frac_8211
+wedge_with_8211 = Wedge((CENTER_X, CENTER_Y), OUTER_RADIUS, 90 - theta_with_8211, 90,
+                   width=OUTER_RADIUS - MIDDLE_RADIUS,
+                   facecolor=COLOR_WITH, edgecolor="k", linewidth=0.6)
+wedge_without_8211 = Wedge((CENTER_X, CENTER_Y), OUTER_RADIUS, -270, 90 - theta_with_8211,
+                      width=OUTER_RADIUS - MIDDLE_RADIUS,
+                      facecolor=COLOR_NO, edgecolor="k", linewidth=0.6)
+global_inset.add_patch(wedge_with_8211)
+global_inset.add_patch(wedge_without_8211)
+
+theta_with_9221 = 360.0 * global_frac_9221
+wedge_with_9221 = Wedge((CENTER_X, CENTER_Y), MIDDLE_RADIUS, 90 - theta_with_9221, 90,
+                   width=MIDDLE_RADIUS - INNER_RADIUS,
+                   facecolor=COLOR_WITH, edgecolor="k", linewidth=0.6)
+wedge_without_9221 = Wedge((CENTER_X, CENTER_Y), MIDDLE_RADIUS, -270, 90 - theta_with_9221,
+                      width=MIDDLE_RADIUS - INNER_RADIUS,
+                      facecolor=COLOR_NO, edgecolor="k", linewidth=0.6)
+global_inset.add_patch(wedge_with_9221)
+global_inset.add_patch(wedge_without_9221)
+
+info_text_8211 = f"{int(round(global_frac_8211 * 100))}% ({global_with_8211}/{global_total})"
+info_text_9221 = f"{int(round(global_frac_9221 * 100))}% ({global_with_9221}/{global_total})"
+global_inset.text(CENTER_X, CENTER_Y + OUTER_RADIUS + TEXT_OFFSET + 0.10, info_text_8211,
+        ha="center", va="bottom", fontsize=8)
+global_inset.text(CENTER_X, CENTER_Y + OUTER_RADIUS + TEXT_OFFSET, info_text_9221,
+        ha="center", va="bottom", fontsize=8)
+
+global_inset.text(CENTER_X, CENTER_Y, "GL", ha="center", va="center",
+        fontsize=9, fontweight="bold")
+
+donut_width = 0.15
+donut_height = 0.22
+
+for code, basin_entry in basins.items():
+    basin_with_8211 = basin_entry["with_8211"]
+    basin_with_9221 = basin_entry["with_9221"]
+    basin_total = basin_entry["total"]
+    basin_fraction_8211 = basin_with_8211 / basin_total
+    basin_fraction_9221 = basin_with_9221 / basin_total
+
+    projected = ax.projection.transform_points(plate_carree,
+                                               np.array([basin_entry["lon"]]),
+                                               np.array([basin_entry["lat"]]))[0, :2]
+    disp_x, disp_y = ax.transData.transform(projected)
+    axes_x, axes_y = ax.transAxes.inverted().transform((disp_x, disp_y))
+
+    if not np.isfinite(axes_x) or not np.isfinite(axes_y):
+        continue
+
+    x0 = np.clip(axes_x - donut_width / 2.0, 0.0, 1.0 - donut_width)
+    y0 = np.clip(axes_y - donut_height / 2.0, 0.0, 1.0 - donut_height)
+
+    basin_ax = ax.inset_axes([x0, y0, donut_width, donut_height], transform=ax.transAxes, zorder=4)
+    basin_ax.set_facecolor("none")
+    basin_ax.set_xlim(0, 1)
+    basin_ax.set_ylim(0, 1)
+    basin_ax.set_aspect("equal")
+    basin_ax.set_xticks([])
+    basin_ax.set_yticks([])
+    for spine in basin_ax.spines.values():
+        spine.set_visible(False)
+    
+    theta_with_8211 = 360.0 * basin_fraction_8211
+    wedge_with_8211 = Wedge((CENTER_X, CENTER_Y), OUTER_RADIUS, 90 - theta_with_8211, 90,
+                       width=OUTER_RADIUS - MIDDLE_RADIUS,
+                       facecolor=COLOR_WITH, edgecolor="k", linewidth=0.6)
+    wedge_without_8211 = Wedge((CENTER_X, CENTER_Y), OUTER_RADIUS, -270, 90 - theta_with_8211,
+                          width=OUTER_RADIUS - MIDDLE_RADIUS,
+                          facecolor=COLOR_NO, edgecolor="k", linewidth=0.6)
+    basin_ax.add_patch(wedge_with_8211)
+    basin_ax.add_patch(wedge_without_8211)
+    
+    theta_with_9221 = 360.0 * basin_fraction_9221
+    wedge_with_9221 = Wedge((CENTER_X, CENTER_Y), MIDDLE_RADIUS, 90 - theta_with_9221, 90,
+                       width=MIDDLE_RADIUS - INNER_RADIUS,
+                       facecolor=COLOR_WITH, edgecolor="k", linewidth=0.6)
+    wedge_without_9221 = Wedge((CENTER_X, CENTER_Y), MIDDLE_RADIUS, -270, 90 - theta_with_9221,
+                          width=MIDDLE_RADIUS - INNER_RADIUS,
+                          facecolor=COLOR_NO, edgecolor="k", linewidth=0.6)
+    basin_ax.add_patch(wedge_with_9221)
+    basin_ax.add_patch(wedge_without_9221)
+    
+    info_text_8211 = f"{int(round(basin_fraction_8211 * 100))}% ({basin_with_8211}/{basin_total})"
+    info_text_9221 = f"{int(round(basin_fraction_9221 * 100))}% ({basin_with_9221}/{basin_total})"
+    basin_ax.text(CENTER_X, CENTER_Y + OUTER_RADIUS + TEXT_OFFSET + 0.15, info_text_8211,
+            ha="center", va="bottom", fontsize=8)
+    basin_ax.text(CENTER_X, CENTER_Y + OUTER_RADIUS + TEXT_OFFSET, info_text_9221,
+            ha="center", va="bottom", fontsize=8)
+    if code == 'AL':
+        code = 'NA'
+    basin_ax.text(CENTER_X, CENTER_Y, code, ha="center", va="center",
+                  fontsize=9, fontweight="bold")
+    if code == 'NA':
+        code = 'AL'
+fig.text(0.25, 0.24, "Outer ring: MHW baseline 1982–2011", ha='left', va='top', fontsize=9)
+fig.text(0.25, 0.20, "Inner ring: MHW baseline 1992–2021", ha='left', va='top', fontsize=9)
+
+output_file = "mhw_plot_pkl/Fig2_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/Fig2_Science.pdf"
+fig.savefig(output_file, bbox_inches="tight")
+plt.close(fig)
+subprocess.run(["open", output_file])
+
+if input("Continue? (yes/no): ").lower() != 'yes':
+    exit()
+
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(5, 7))
+x = np.linspace(0, 200, 200)
+density_wtmhw_b8211 = stats.gaussian_kde(lmi_wtmhw_b8211.dropna())
+ax1.plot(x, density_wtmhw_b8211(x), '-', linewidth=2, 
+         label='With-MHW', alpha=0.8, color=COLOR_WITH)
+density_nomhw_b8211 = stats.gaussian_kde(lmi_nomhw_b8211.dropna())
+ax1.plot(x, density_nomhw_b8211(x), '-', linewidth=2, 
+         label='No-MHW', alpha=0.8, color=COLOR_NO)
+ax1.set_xlabel('Lifetime maximum intensity (knots)')
+ax1.set_ylabel('Probability density')
+ax1.legend(loc='best')
+ax1.grid(True, alpha=0.3)
+ax1.set_title('GL: MHW baseline 1982–2011')
+ax1.text(0.02, 0.98, 'A', transform=ax1.transAxes, fontsize=12, fontweight='bold',
+         verticalalignment='top')
+density_wtmhw_b9221 = stats.gaussian_kde(lmi_wtmhw_b9221.dropna())
+ax2.plot(x, density_wtmhw_b9221(x), '-', linewidth=2,
+         label='With-MHW', alpha=0.8, color=COLOR_WITH)
+density_nomhw_b9221 = stats.gaussian_kde(lmi_nomhw_b9221.dropna())
+ax2.plot(x, density_nomhw_b9221(x), '-', linewidth=2,
+         label='No-MHW', alpha=0.8, color=COLOR_NO)
+ax2.set_xlabel('Lifetime maximum intensity (knots)')
+ax2.set_ylabel('Probability density')
+ax2.legend(loc='best')
+ax2.grid(True, alpha=0.3)
+ax2.set_title('GL: MHW baseline 1992–2021')
+ax2.text(0.02, 0.98, 'B', transform=ax2.transAxes, fontsize=12, fontweight='bold',
+         verticalalignment='top')
+fig.tight_layout()
+output_file = "mhw_plot_pkl/Fig3_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/Fig3_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+stats.ks_2samp(lmi_nomhw_b8211.dropna(), lmi_wtmhw_b8211.dropna())
+stats.ks_2samp(lmi_nomhw_b9221.dropna(), lmi_wtmhw_b9221.dropna())
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 5))
+axes = axes.flatten()
+basins = [
+    ('AL', 'Atlantic', lambda x: x.str.startswith('AL')),
+    ('EP', 'Eastern Pacific', lambda x: x.str.startswith('EP') | x.str.startswith('CP')),
+    ('SH', 'Southern Hemisphere', lambda x: x.str.startswith('SH')),
+    ('IO', 'Indian Ocean', lambda x: x.str.startswith('IO')),
+    ('WP', 'Western Pacific', lambda x: x.str.startswith('WP'))
+]
+subplot_labels = ['A', 'B', 'C', 'D', 'E']
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_wtmhw = name_wtmhw_b8211[filter_func(name_wtmhw_b8211['name'])]
+    basin_nomhw = name_nomhw_b8211[filter_func(name_nomhw_b8211['name'])]
+    lmi_wtmhw = basin_wtmhw.groupby('name')['LMI'].max()
+    lmi_nomhw = basin_nomhw.groupby('name')['LMI'].max()
+    x = np.linspace(0, 200, 200)
+    if len(lmi_wtmhw.dropna()) > 0:
+        density_wtmhw = stats.gaussian_kde(lmi_wtmhw.dropna())
+        ax.plot(x, density_wtmhw(x), '-', linewidth=2,
+                label='With-MHW', alpha=0.8, color=COLOR_WITH)
+    if len(lmi_nomhw.dropna()) > 0:
+        density_nomhw = stats.gaussian_kde(lmi_nomhw.dropna())
+        ax.plot(x, density_nomhw(x), '-', linewidth=2,
+                label='No-MHW', alpha=0.8, color=COLOR_NO)
+    ax.set_xlabel('Lifetime maximum intensity (knots)')
+    ax.set_ylabel('Probability density')
+    ax.legend(loc='best')
+    ax.grid(True, alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes, 
+            fontsize=12, fontweight='bold', verticalalignment='top')
+    stats.ks_2samp(lmi_nomhw.dropna(), lmi_wtmhw.dropna())
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS1_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS1_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 5))
+axes = axes.flatten()
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_wtmhw = name_wtmhw_b9221[filter_func(name_wtmhw_b9221['name'])]
+    basin_nomhw = name_nomhw_b9221[filter_func(name_nomhw_b9221['name'])]
+    lmi_wtmhw = basin_wtmhw.groupby('name')['LMI'].max()
+    lmi_nomhw = basin_nomhw.groupby('name')['LMI'].max()
+    x = np.linspace(0, 200, 200)
+    if len(lmi_wtmhw.dropna()) > 0:
+        density_wtmhw = stats.gaussian_kde(lmi_wtmhw.dropna())
+        ax.plot(x, density_wtmhw(x), '-', linewidth=2,
+                label='With-MHW', alpha=0.8, color=COLOR_WITH)
+    if len(lmi_nomhw.dropna()) > 0:
+        density_nomhw = stats.gaussian_kde(lmi_nomhw.dropna())
+        ax.plot(x, density_nomhw(x), '-', linewidth=2,
+                label='No-MHW', alpha=0.8, color=COLOR_NO)
+    ax.set_xlabel('Lifetime maximum intensity (knots)')
+    ax.set_ylabel('Probability density')
+    ax.legend(loc='best')
+    ax.grid(True, alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+    stats.ks_2samp(lmi_nomhw.dropna(), lmi_wtmhw.dropna())
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS2_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS2_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 2, figsize=(6, 9))
+axes = axes.flatten()
+x_pos = [0, 1]
+colors   = [COLOR_NO, COLOR_WITH]
+nomhw_se = lmi_nomhw_b8211.dropna().values.std() / np.sqrt(len(lmi_nomhw_b8211.dropna().values))
+wtmhw_se = lmi_wtmhw_b8211.dropna().values.std() / np.sqrt(len(lmi_wtmhw_b8211.dropna().values))
+means   = [lmi_nomhw_b8211.dropna().values.mean(), lmi_wtmhw_b8211.dropna().values.mean()]
+errors   = [nomhw_se, wtmhw_se]
+bars = axes[0].bar(x_pos, means, yerr=errors, capsize=10, color=colors, 
+                   alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+axes[0].set_xticks(x_pos)
+axes[0].set_xticklabels(['No-MHW', 'With-MHW'])
+axes[0].set_ylabel('Lifetime maximum intensity (knots)')
+axes[0].grid(axis='y', alpha=0.3)
+axes[0].set_title('GL: MHW baseline 1982–2011')
+axes[0].text(0.02, 0.98, 'A', transform=axes[0].transAxes, fontsize=12, fontweight='bold',
+         verticalalignment='top')
+for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+    height = bar.get_height()
+    axes[0].text(bar.get_x() + bar.get_width()/2., height + err,
+                 f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+nomhw_se = lmi_nomhw_b9221.dropna().values.std() / np.sqrt(len(lmi_nomhw_b9221.dropna().values))
+wtmhw_se = lmi_wtmhw_b9221.dropna().values.std() / np.sqrt(len(lmi_wtmhw_b9221.dropna().values))
+means   = [lmi_nomhw_b9221.dropna().values.mean(), lmi_wtmhw_b9221.dropna().values.mean()]
+errors   = [nomhw_se, wtmhw_se]
+bars = axes[1].bar(x_pos, means, yerr=errors, capsize=10, color=colors,                
+                   alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+axes[1].set_xticks(x_pos)
+axes[1].set_xticklabels(['No-MHW', 'With-MHW'])
+axes[1].set_ylabel('Lifetime maximum intensity (knots)')
+axes[1].grid(axis='y', alpha=0.3)
+axes[1].set_title('GL: MHW baseline 1992–2021')
+axes[1].text(0.02, 0.98, 'B', transform=axes[1].transAxes, fontsize=12, fontweight='bold',
+             verticalalignment='top')
+for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+    height = bar.get_height()
+    axes[1].text(bar.get_x() + bar.get_width()/2., height + err,
+                 f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+ic_nomhw_b8211 = name_nomhw_b8211.groupby('name')['IC'].max()
+ic_wtmhw_b8211 = name_wtmhw_b8211.groupby('name')['IC'].max()
+nomhw_se = ic_nomhw_b8211.dropna().values.std() / np.sqrt(len(ic_nomhw_b8211.dropna().values))
+wtmhw_se = ic_wtmhw_b8211.dropna().values.std() / np.sqrt(len(ic_wtmhw_b8211.dropna().values))
+means   = [ic_nomhw_b8211.dropna().values.mean(), ic_wtmhw_b8211.dropna().values.mean()]
+errors   = [nomhw_se, wtmhw_se]
+bars = axes[2].bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                   alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+axes[2].set_xticks(x_pos)
+axes[2].set_xticklabels(['No-MHW', 'With-MHW'])
+axes[2].set_ylabel('Intensity change (knots)')
+axes[2].grid(axis='y', alpha=0.3)
+axes[2].set_title('GL: MHW baseline 1982–2011')
+axes[2].text(0.02, 0.98, 'C', transform=axes[2].transAxes, fontsize=12, fontweight='bold',
+             verticalalignment='top')
+for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+    height = bar.get_height()
+    axes[2].text(bar.get_x() + bar.get_width()/2., height + err,
+                 f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+ic_nomhw_b9221 = name_nomhw_b9221.groupby('name')['IC'].max()
+ic_wtmhw_b9221 = name_wtmhw_b9221.groupby('name')['IC'].max()
+nomhw_se = ic_nomhw_b9221.dropna().values.std() / np.sqrt(len(ic_nomhw_b9221.dropna().values))
+wtmhw_se = ic_wtmhw_b9221.dropna().values.std() / np.sqrt(len(ic_wtmhw_b9221.dropna().values))
+means   = [ic_nomhw_b9221.dropna().values.mean(), ic_wtmhw_b9221.dropna().values.mean()]
+errors   = [nomhw_se, wtmhw_se]
+bars = axes[3].bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                   alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+axes[3].set_xticks(x_pos)
+axes[3].set_xticklabels(['No-MHW', 'With-MHW'])
+axes[3].set_ylabel('Intensity change (knots)')
+axes[3].grid(axis='y', alpha=0.3)
+axes[3].set_title('GL: MHW baseline 1992–2021')
+axes[3].text(0.02, 0.98, 'D', transform=axes[3].transAxes, fontsize=12, fontweight='bold',
+             verticalalignment='top')
+for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+    height = bar.get_height()
+    axes[3].text(bar.get_x() + bar.get_width()/2., height + err,
+                 f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS3_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS3_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 9))
+axes = axes.flatten()
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_wtmhw = name_wtmhw_b8211[filter_func(name_wtmhw_b8211['name'])]
+    basin_nomhw = name_nomhw_b8211[filter_func(name_nomhw_b8211['name'])]
+    lmi_wtmhw = basin_wtmhw.groupby('name')['LMI'].max()
+    lmi_nomhw = basin_nomhw.groupby('name')['LMI'].max()
+    nomhw_se = lmi_nomhw.dropna().values.std() / np.sqrt(len(lmi_nomhw.dropna().values))
+    wtmhw_se = lmi_wtmhw.dropna().values.std() / np.sqrt(len(lmi_wtmhw.dropna().values))
+    means    = [lmi_nomhw.dropna().values.mean(), lmi_wtmhw.dropna().values.mean()]
+    errors   = [nomhw_se, wtmhw_se]
+    bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                  alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(['No-MHW', 'With-MHW'])
+    ax.set_ylabel('Lifetime maximum intensity (knots)')
+    ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+    for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + err,
+                f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS4_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS4_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 9))
+axes = axes.flatten()
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_wtmhw = name_wtmhw_b9221[filter_func(name_wtmhw_b9221['name'])]
+    basin_nomhw = name_nomhw_b9221[filter_func(name_nomhw_b9221['name'])]
+    lmi_wtmhw = basin_wtmhw.groupby('name')['LMI'].max()
+    lmi_nomhw = basin_nomhw.groupby('name')['LMI'].max()
+    nomhw_se = lmi_nomhw.dropna().values.std() / np.sqrt(len(lmi_nomhw.dropna().values))
+    wtmhw_se = lmi_wtmhw.dropna().values.std() / np.sqrt(len(lmi_wtmhw.dropna().values))
+    means    = [lmi_nomhw.dropna().values.mean(), lmi_wtmhw.dropna().values.mean()]
+    errors   = [nomhw_se, wtmhw_se]
+    bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                  alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(['No-MHW', 'With-MHW'])
+    ax.set_ylabel('Lifetime maximum intensity (knots)')
+    ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+    for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + err,
+                f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS5_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS5_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 9))
+axes = axes.flatten()
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_wtmhw = name_wtmhw_b8211[filter_func(name_wtmhw_b8211['name'])]
+    basin_nomhw = name_nomhw_b8211[filter_func(name_nomhw_b8211['name'])]
+    ic_wtmhw = basin_wtmhw.groupby('name')['IC'].max()
+    ic_nomhw = basin_nomhw.groupby('name')['IC'].max()
+    nomhw_se = ic_nomhw.dropna().values.std() / np.sqrt(len(ic_nomhw.dropna().values))
+    wtmhw_se = ic_wtmhw.dropna().values.std() / np.sqrt(len(ic_wtmhw.dropna().values))
+    means    = [ic_nomhw.dropna().values.mean(), ic_wtmhw.dropna().values.mean()]
+    errors   = [nomhw_se, wtmhw_se]
+    bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                  alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(['No-MHW', 'With-MHW'])
+    ax.set_ylabel('Intensity change (knots)')
+    ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+    for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + err,
+                f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS6_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS6_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 9))
+axes = axes.flatten()
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_wtmhw = name_wtmhw_b9221[filter_func(name_wtmhw_b9221['name'])]
+    basin_nomhw = name_nomhw_b9221[filter_func(name_nomhw_b9221['name'])]
+    ic_wtmhw = basin_wtmhw.groupby('name')['IC'].max()
+    ic_nomhw = basin_nomhw.groupby('name')['IC'].max()
+    nomhw_se = ic_nomhw.dropna().values.std() / np.sqrt(len(ic_nomhw.dropna().values))
+    wtmhw_se = ic_wtmhw.dropna().values.std() / np.sqrt(len(ic_wtmhw.dropna().values))
+    means    = [ic_nomhw.dropna().values.mean(), ic_wtmhw.dropna().values.mean()]
+    errors   = [nomhw_se, wtmhw_se]
+    bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                  alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(['No-MHW', 'With-MHW'])
+    ax.set_ylabel('Intensity change (knots)')
+    ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+    for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + err,
+                f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS7_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS7_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+"""
+ir_nomhw = name_nomhw.groupby('name')['IR'].max()
+ir_wtmhw = name_wtmhw.groupby('name')['IR'].max()
+fig, ax = plt.subplots(figsize=(5, 6))
+nomhw_se = ir_nomhw.dropna().values.std() / np.sqrt(len(ir_nomhw.dropna().values))
+wtmhw_se = ir_wtmhw.dropna().values.std() / np.sqrt(len(ir_wtmhw.dropna().values))
+x_pos = [0, 1]
+means = [ir_nomhw.dropna().values.mean(), ir_wtmhw.dropna().values.mean()]
+errors = [nomhw_se, wtmhw_se]
+colors = [COLOR_NO, COLOR_WITH]
+bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+               alpha=0.7, edgecolor='black', linewidth=2)
+ax.set_xticks(x_pos)
+ax.set_xticklabels(['No-MHW', 'With-MHW'])
+ax.set_ylabel('Intensification rate (kt/day)', fontsize=12)
+ax.grid(axis='y', alpha=0.3)
+for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+    height = bar.get_height()
+    ax.text(bar.get_x() + bar.get_width()/2., height + err,
+            f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+fig.tight_layout()
+plt.show()
+"""
+
+def resample_group(group):
+    group = group.set_index('time')
+    resampled = group.resample('6h').asfreq()
+    resampled['name'] = resampled['name'].ffill()
+    resampled['wind'] = resampled['wind'].interpolate(method='linear')
+    return resampled.reset_index()
+
+name_ri = name[['name', 'time', 'wind']].groupby('name', group_keys=False).apply(resample_group).reset_index(drop=True)
+name_ri['dt'] = name_ri.groupby('name')['time'].diff().dt.total_seconds().div(3600).astype('float64')
+name_ri['IR24'] = name_ri.groupby('name')['wind'].transform(lambda x: x.shift(-2) - x.shift(2))
+name_ri['RI'] = (name_ri['IR24'] >= 30)
+name_ri['RIf'] = name_ri.groupby('name')['RI'].transform('sum')
+
+name_ri_wtmhw_b8211 = name_ri[name_ri['name'].isin(has_mhw_b8211[has_mhw_b8211 > 0].index)]
+name_ri_nomhw_b8211 = name_ri[~name_ri['name'].isin(has_mhw_b8211[has_mhw_b8211 > 0].index)]
+
+name_ri_wtmhw_b9221 = name_ri[name_ri['name'].isin(has_mhw_b9221[has_mhw_b9221 > 0].index)]
+name_ri_nomhw_b9221 = name_ri[~name_ri['name'].isin(has_mhw_b9221[has_mhw_b9221 > 0].index)]
+
+ri_wtmhw_b8211 = [name_ri_wtmhw_b8211[name_ri_wtmhw_b8211['RIf'] > 0]['name'].unique().shape[0], name_ri_wtmhw_b8211[name_ri_wtmhw_b8211['RIf'] == 0]['name'].unique().shape[0]]
+ri_nomhw_b8211 = [name_ri_nomhw_b8211[name_ri_nomhw_b8211['RIf'] > 0]['name'].unique().shape[0], name_ri_nomhw_b8211[name_ri_nomhw_b8211['RIf'] == 0]['name'].unique().shape[0]]
+ratio_wtmhw_b8211 = ri_wtmhw_b8211[0] / sum(ri_wtmhw_b8211)
+ratio_nomhw_b8211 = ri_nomhw_b8211[0] / sum(ri_nomhw_b8211)
+
+ri_wtmhw_b9221 = [name_ri_wtmhw_b9221[name_ri_wtmhw_b9221['RIf'] > 0]['name'].unique().shape[0], name_ri_wtmhw_b9221[name_ri_wtmhw_b9221['RIf'] == 0]['name'].unique().shape[0]]
+ri_nomhw_b9221 = [name_ri_nomhw_b9221[name_ri_nomhw_b9221['RIf'] > 0]['name'].unique().shape[0], name_ri_nomhw_b9221[name_ri_nomhw_b9221['RIf'] == 0]['name'].unique().shape[0]]
+ratio_wtmhw_b9221 = ri_wtmhw_b9221[0] / sum(ri_wtmhw_b9221)
+ratio_nomhw_b9221 = ri_nomhw_b9221[0] / sum(ri_nomhw_b9221)
+
+fig, axes = plt.subplots(2, 2, figsize=(7, 9))
+axes = axes.flatten()
+
+wtmhw_se = np.sqrt(ratio_wtmhw_b8211 * (1 - ratio_wtmhw_b8211) / sum(ri_wtmhw_b8211))
+nomhw_se = np.sqrt(ratio_nomhw_b8211 * (1 - ratio_nomhw_b8211) / sum(ri_nomhw_b8211))
+means =  [ratio_nomhw_b8211, ratio_wtmhw_b8211]
+errors = [nomhw_se, wtmhw_se]
+bars = axes[0].bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                   alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+axes[0].set_xticks(x_pos)
+axes[0].set_xticklabels(['No-MHW', 'With-MHW'])
+axes[0].set_ylabel('Ratio of rapid-intensification TCs')
+axes[0].grid(axis='y', alpha=0.3)
+axes[0].set_title('GL: MHW baseline 1982–2011')
+axes[0].text(0.02, 0.98, 'A', transform=axes[0].transAxes, fontsize=12, fontweight='bold',
+             verticalalignment='top')
+for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+    height = bar.get_height()
+    axes[0].text(bar.get_x() + bar.get_width()/2., height + err,
+                 f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+wtmhw_se = np.sqrt(ratio_wtmhw_b9221 * (1 - ratio_wtmhw_b9221) / sum(ri_wtmhw_b9221))
+nomhw_se = np.sqrt(ratio_nomhw_b9221 * (1 - ratio_nomhw_b9221) / sum(ri_nomhw_b9221))
+means =  [ratio_nomhw_b9221, ratio_wtmhw_b9221]
+errors = [nomhw_se, wtmhw_se]
+bars = axes[1].bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                   alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+axes[1].set_xticks(x_pos)
+axes[1].set_xticklabels(['No-MHW', 'With-MHW']) 
+axes[1].set_ylabel('Ratio of rapid-intensification TCs')
+axes[1].grid(axis='y', alpha=0.3)
+axes[1].set_title('GL: MHW baseline 1992–2021')
+axes[1].text(0.02, 0.98, 'B', transform=axes[1].transAxes, fontsize=12, fontweight='bold',
+             verticalalignment='top')
+for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+    height = bar.get_height()
+    axes[1].text(bar.get_x() + bar.get_width()/2., height + err,
+                 f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+# cl_nomhw_b8211 = name_nomhw_b8211[name_nomhw_b8211['bLMI']].groupby('name')['mw_Cooling'].mean()
+# cl_wtmhw_b8211 = name_wtmhw_b8211[name_wtmhw_b8211['bLMI']].groupby('name')['mw_Cooling'].mean()
+dr_nomhw_b8211 = name_nomhw_b8211[name_nomhw_b8211['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+dr_wtmhw_b8211 = name_wtmhw_b8211[name_wtmhw_b8211['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+t_stat, p_value = stats.ttest_ind(dr_nomhw_b8211, dr_wtmhw_b8211, equal_var=False, nan_policy="omit", alternative="two-sided")
+print(f"T-statistic: {t_stat}")
+print(f"P-value: {p_value}")
+nomhw_se = dr_nomhw_b8211.dropna().values.std() / np.sqrt(len(dr_nomhw_b8211.dropna().values))
+wtmhw_se = dr_wtmhw_b8211.dropna().values.std() / np.sqrt(len(dr_wtmhw_b8211.dropna().values))
+means = [dr_nomhw_b8211.dropna().values.mean(), dr_wtmhw_b8211.dropna().values.mean()]
+errors = [nomhw_se, wtmhw_se]
+bars = axes[2].bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                   alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+axes[2].set_xticks(x_pos)
+axes[2].set_xticklabels(['No-MHW', 'With-MHW'])
+axes[2].set_ylabel('During-storm sea surface temperature (°C)')
+axes[2].grid(axis='y', alpha=0.3)
+axes[2].set_title('GL: MHW baseline 1982–2011')
+axes[2].text(0.02, 0.98, 'C', transform=axes[2].transAxes, fontsize=12, fontweight='bold',
+             verticalalignment='top')
+axes[2].set_ylim(25, 30)
+for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+    height = bar.get_height()
+    axes[2].text(bar.get_x() + bar.get_width()/2., height + err,
+                 f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+# cl_nomhw_b9221 = name_nomhw_b9221[name_nomhw_b9221['bLMI']].groupby('name')['mw_Cooling'].mean()
+# cl_wtmhw_b9221 = name_wtmhw_b9221[name_wtmhw_b9221['bLMI']].groupby('name')['mw_Cooling'].mean()
+dr_nomhw_b9221 = name_nomhw_b9221[name_nomhw_b9221['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+dr_wtmhw_b9221 = name_wtmhw_b9221[name_wtmhw_b9221['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+t_stat, p_value = stats.ttest_ind(dr_nomhw_b9221, dr_wtmhw_b9221, equal_var=False, nan_policy="omit", alternative="two-sided")
+print(f"T-statistic: {t_stat}")
+print(f"P-value: {p_value}")
+nomhw_se = dr_nomhw_b9221.dropna().values.std() / np.sqrt(len(dr_nomhw_b9221.dropna().values))
+wtmhw_se = dr_wtmhw_b9221.dropna().values.std() / np.sqrt(len(dr_wtmhw_b9221.dropna().values))
+means = [dr_nomhw_b9221.dropna().values.mean(), dr_wtmhw_b9221.dropna().values.mean()]
+errors = [nomhw_se, wtmhw_se]
+bars = axes[3].bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                   alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+axes[3].set_xticks(x_pos)
+axes[3].set_xticklabels(['No-MHW', 'With-MHW'])
+axes[3].set_ylabel('During-storm sea surface temperature (°C)')
+axes[3].grid(axis='y', alpha=0.3)
+axes[3].set_title('GL: MHW baseline 1992–2021')
+axes[3].text(0.02, 0.98, 'D', transform=axes[3].transAxes, fontsize=12, fontweight='bold',
+             verticalalignment='top')
+axes[3].set_ylim(25, 30)
+for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+    height = bar.get_height()
+    axes[3].text(bar.get_x() + bar.get_width()/2., height + err,
+                 f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+fig.tight_layout()
+output_file = "mhw_plot_pkl/Fig4_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/Fig4_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 9))
+axes = axes.flatten()
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_wtmhw = name_ri_wtmhw_b8211[filter_func(name_ri_wtmhw_b8211['name'])]
+    basin_nomhw = name_ri_nomhw_b8211[filter_func(name_ri_nomhw_b8211['name'])]
+    ri_wtmhw = [basin_wtmhw[basin_wtmhw['RIf'] > 0]['name'].unique().shape[0], basin_wtmhw[basin_wtmhw['RIf'] == 0]['name'].unique().shape[0]]
+    ri_nomhw = [basin_nomhw[basin_nomhw['RIf'] > 0]['name'].unique().shape[0], basin_nomhw[basin_nomhw['RIf'] == 0]['name'].unique().shape[0]]
+    ratio_wtmhw = ri_wtmhw[0] / sum(ri_wtmhw)
+    ratio_nomhw = ri_nomhw[0] / sum(ri_nomhw)
+    wtmhw_se = np.sqrt(ratio_wtmhw * (1 - ratio_wtmhw) / sum(ri_wtmhw))
+    nomhw_se = np.sqrt(ratio_nomhw * (1 - ratio_nomhw) / sum(ri_nomhw))
+    means = [ratio_nomhw, ratio_wtmhw]
+    errors = [nomhw_se, wtmhw_se]
+    bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                  alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(['No-MHW', 'With-MHW'])
+    ax.set_ylabel('Ratio of rapid-intensification TCs')
+    ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+    for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + err,
+                f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS8_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS8_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 9))
+axes = axes.flatten()
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_wtmhw = name_ri_wtmhw_b9221[filter_func(name_ri_wtmhw_b9221['name'])]
+    basin_nomhw = name_ri_nomhw_b9221[filter_func(name_ri_nomhw_b9221['name'])]
+    ri_wtmhw = [basin_wtmhw[basin_wtmhw['RIf'] > 0]['name'].unique().shape[0], basin_wtmhw[basin_wtmhw['RIf'] == 0]['name'].unique().shape[0]]
+    ri_nomhw = [basin_nomhw[basin_nomhw['RIf'] > 0]['name'].unique().shape[0], basin_nomhw[basin_nomhw['RIf'] == 0]['name'].unique().shape[0]]
+    ratio_wtmhw = ri_wtmhw[0] / sum(ri_wtmhw)
+    ratio_nomhw = ri_nomhw[0] / sum(ri_nomhw)
+    wtmhw_se = np.sqrt(ratio_wtmhw * (1 - ratio_wtmhw) / sum(ri_wtmhw))
+    nomhw_se = np.sqrt(ratio_nomhw * (1 - ratio_nomhw) / sum(ri_nomhw))
+    means = [ratio_nomhw, ratio_wtmhw]
+    errors = [nomhw_se, wtmhw_se]
+    bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                  alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(['No-MHW', 'With-MHW'])
+    ax.set_ylabel('Ratio of rapid-intensification TCs')
+    ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+    for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + err,
+                f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS9_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS9_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 9))
+axes = axes.flatten()
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_wtmhw = name_wtmhw_b8211[filter_func(name_wtmhw_b8211['name'])]
+    basin_nomhw = name_nomhw_b8211[filter_func(name_nomhw_b8211['name'])]
+    # cl_wtmhw = basin_wtmhw[basin_wtmhw['bLMI']].groupby('name')['mw_Cooling'].mean()
+    # cl_nomhw = basin_nomhw[basin_nomhw['bLMI']].groupby('name')['mw_Cooling'].mean()
+    dr_wtmhw = basin_wtmhw[basin_wtmhw['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+    dr_nomhw = basin_nomhw[basin_nomhw['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+    nomhw_se = dr_nomhw.dropna().values.std() / np.sqrt(len(dr_nomhw.dropna().values))
+    wtmhw_se = dr_wtmhw.dropna().values.std() / np.sqrt(len(dr_wtmhw.dropna().values))
+    means    = [dr_nomhw.dropna().values.mean(), dr_wtmhw.dropna().values.mean()]
+    errors   = [nomhw_se, wtmhw_se]
+    bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                  alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(['No-MHW', 'With-MHW'])
+    ax.set_ylabel('During-storm sea surface temperature (°C)')
+    ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+    ax.set_ylim(25, 30)
+    for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + err,
+                f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+
+    
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS10_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS10_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 9))
+axes = axes.flatten()
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_wtmhw = name_wtmhw_b9221[filter_func(name_wtmhw_b9221['name'])]
+    basin_nomhw = name_nomhw_b9221[filter_func(name_nomhw_b9221['name'])]
+    # cl_wtmhw = basin_wtmhw[basin_wtmhw['bLMI']].groupby('name')['mw_Cooling'].mean()
+    # cl_nomhw = basin_nomhw[basin_nomhw['bLMI']].groupby('name')['mw_Cooling'].mean()
+    dr_wtmhw = basin_wtmhw[basin_wtmhw['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+    dr_nomhw = basin_nomhw[basin_nomhw['bLMI']].groupby('name')['mw_cSST'].mean() - 273.15
+    nomhw_se = dr_nomhw.dropna().values.std() / np.sqrt(len(dr_nomhw.dropna().values))
+    wtmhw_se = dr_wtmhw.dropna().values.std() / np.sqrt(len(dr_wtmhw.dropna().values))
+    means    = [dr_nomhw.dropna().values.mean(), dr_wtmhw.dropna().values.mean()]
+    errors   = [nomhw_se, wtmhw_se]
+    bars = ax.bar(x_pos, means, yerr=errors, capsize=10, color=colors,
+                  alpha=0.7, edgecolor='black', linewidth=0.5, width=0.4)
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(['No-MHW', 'With-MHW'])
+    ax.set_ylabel('During-storm sea surface temperature (°C)')
+    ax.grid(axis='y', alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+    ax.set_ylim(25, 30)
+    for i, (bar, mean, err) in enumerate(zip(bars, means, errors)):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + err,
+                f'{mean:.2f}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS11_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS11_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(1, 2, figsize=(7, 4.5))
+axes = axes.flatten()
+
+x = []
+y = []
+for i in range(1, 13):
+    mean_lmi = name[name['name'].isin(has_mhw_b8211[has_mhw_b8211 == i].index)].groupby('name')['LMI'].max().mean()
+    x.append(i)
+    y.append(mean_lmi)
+
+x = np.array(x)
+y = np.array(y)
+slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+print(stats.linregress(x, y))
+regression_line = slope * x + intercept
+axes[0].scatter(x, y, color='black', s=50, zorder=5)
+axes[0].plot(x, regression_line, color='black', linestyle='-', linewidth=1.5)
+axes[0].set_xlabel('Number of MHW encounters')
+axes[0].set_ylabel('Lifetime maximum intensity (knots)')
+axes[0].grid(True, alpha=0.3)
+axes[0].set_title('GL: MHW baseline 1982–2011')
+axes[0].text(0.02, 0.98, 'A', transform=axes[0].transAxes, fontsize=12, fontweight='bold',
+             verticalalignment='top')
+
+x = []
+y = []
+for i in range(1, 13):
+    mean_lmi = name[name['name'].isin(has_mhw_b9221[has_mhw_b9221 == i].index)].groupby('name')['LMI'].max().mean()
+    x.append(i)
+    y.append(mean_lmi)
+
+x = np.array(x)
+y = np.array(y)
+slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+print(stats.linregress(x, y))
+regression_line = slope * x + intercept
+axes[1].scatter(x, y, color='black', s=50, zorder=5)
+axes[1].plot(x, regression_line, color='black', linestyle='-', linewidth=1.5)
+axes[1].set_xlabel('Number of MHW encounters')
+axes[1].set_ylabel('Lifetime maximum intensity (knots)')
+axes[1].grid(True, alpha=0.3)
+axes[1].set_title('GL: MHW baseline 1992–2021')
+axes[1].text(0.02, 0.98, 'B', transform=axes[1].transAxes, fontsize=12, fontweight='bold',
+             verticalalignment='top')
+
+"""
+x = []
+y = []
+for i in range(1, 13):
+    mean_ri = name_ri[name_ri['name'].isin(has_mhw_b8211[has_mhw_b8211 == i].index)].groupby('name')['RI'].any().sum() / name_ri[name_ri['name'].isin(has_mhw_b8211[has_mhw_b8211 == i].index)]['name'].unique().shape[0]
+    x.append(i)
+    y.append(mean_ri)
+
+x = np.array(x)
+y = np.array(y)
+slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+print(stats.linregress(x, y))
+regression_line = slope * x + intercept
+axes[2].scatter(x, y, color='black', s=50, zorder=5)
+axes[2].plot(x, regression_line, color='black', linestyle='-', linewidth=1.5)
+axes[2].set_xlabel('Number of MHW encounters')
+axes[2].set_ylabel('Ratio of rapid-intensification TCs')
+axes[2].grid(True, alpha=0.3)
+axes[2].set_title('GL: MHW baseline 1982–2011')
+axes[2].text(0.02, 0.98, 'C', transform=axes[2].transAxes, fontsize=12, fontweight='bold',
+             verticalalignment='top')
+
+x = []
+y = []
+for i in range(1, 13):
+    mean_ri = name_ri[name_ri['name'].isin(has_mhw_b9221[has_mhw_b9221 == i].index)].groupby('name')['RI'].any().sum() / name_ri[name_ri['name'].isin(has_mhw_b9221[has_mhw_b9221 == i].index)]['name'].unique().shape[0]
+    x.append(i)
+    y.append(mean_ri)
+
+x = np.array(x)
+y = np.array(y)
+slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+print(stats.linregress(x, y))
+regression_line = slope * x + intercept
+axes[3].scatter(x, y, color='black', s=50, zorder=5)
+axes[3].plot(x, regression_line, color='black', linestyle='-', linewidth=1.5)
+axes[3].set_xlabel('Number of MHW encounters')
+axes[3].set_ylabel('Ratio of rapid-intensification TCs')
+axes[3].grid(True, alpha=0.3)
+axes[3].set_title('GL: MHW baseline 1992–2021')
+axes[3].text(0.02, 0.98, 'D', transform=axes[3].transAxes, fontsize=12, fontweight='bold',
+             verticalalignment='top')
+"""
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS12_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS12_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 9))
+axes = axes.flatten()
+
+n_points = np.array([13, 13, 10, 7, 13])
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_name = name[filter_func(name['name'])]
+    x = []
+    y = []       
+    for i in range(1, n_points[idx]):
+        mean_lmi = basin_name[basin_name['name'].isin(has_mhw_b8211[has_mhw_b8211 == i].index)].groupby('name')['LMI'].max().mean()
+        x.append(i)
+        y.append(mean_lmi)
+    x = np.array(x)
+    y = np.array(y)
+    x = x[~np.isnan(y)]
+    y = y[~np.isnan(y)]
+    slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+    print(stats.linregress(x, y))
+    regression_line = slope * x + intercept
+    ax.scatter(x, y, color='black', s=50, zorder=5)
+    ax.plot(x, regression_line, color='black', linestyle='-', linewidth=1.5)
+    ax.set_xlabel('Number of MHW encounters')
+    ax.set_ylabel('Lifetime maximum intensity (knots)')
+    ax.grid(True, alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS13_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS13_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 9))
+axes = axes.flatten()
+
+n_points = np.array([13, 9, 7, 5, 10])
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_name = name[filter_func(name['name'])]
+    x = []
+    y = []
+    for i in range(1, n_points[idx]):
+        mean_lmi = basin_name[basin_name['name'].isin(has_mhw_b9221[has_mhw_b9221 == i].index)].groupby('name')['LMI'].max().mean()
+        x.append(i)
+        y.append(mean_lmi)
+    x = np.array(x)
+    y = np.array(y)
+    x = x[~np.isnan(y)]
+    y = y[~np.isnan(y)]
+    slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+    print(stats.linregress(x, y))
+    regression_line = slope * x + intercept
+    ax.scatter(x, y, color='black', s=50, zorder=5)
+    ax.plot(x, regression_line, color='black', linestyle='-', linewidth=1.5)
+    ax.set_xlabel('Number of MHW encounters')
+    ax.set_ylabel('Lifetime maximum intensity (knots)')
+    ax.grid(True, alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS14_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS14_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+def count_indices_by_year(index_list, start_year=1982, end_year=2024):
+    years = [int(str(idx)[-4:]) for idx in index_list]
+    year_counts = Counter(years)
+    result = {}
+    for year in range(start_year, end_year + 1):
+        result[year] = year_counts.get(year, 0)
+    return result
+
+years = list(range(1982, 2024))
+
+fig, axes = plt.subplots(1, 2, figsize=(7, 4.5))
+axes = axes.flatten()
+
+num_wtmhw_b8211 = count_indices_by_year(name_wtmhw_b8211['name'].unique())
+num_nomhw_b8211 = count_indices_by_year(name_nomhw_b8211['name'].unique())
+wtmhw_values_b8211 = [num_wtmhw_b8211[year] for year in years]
+nomhw_values_b8211 = [num_nomhw_b8211[year] for year in years]
+slope_wtmhw, intercept_wtmhw, _, _, _ = stats.linregress(years, wtmhw_values_b8211)
+print(stats.linregress(years, wtmhw_values_b8211))
+trend_wtmhw = [slope_wtmhw * year + intercept_wtmhw for year in years]
+slope_nomhw, intercept_nomhw, _, _, _ = stats.linregress(years, nomhw_values_b8211)
+print(stats.linregress(years, nomhw_values_b8211))
+trend_nomhw = [slope_nomhw * year + intercept_nomhw for year in years]
+axes[0].plot(years, wtmhw_values_b8211, color=COLOR_WITH,  marker='o', markersize=4, label='With-MHW', linewidth=1.5)
+axes[0].plot(years, nomhw_values_b8211, color=COLOR_NO, marker='o', markersize=4, label='No-MHW',   linewidth=1.5)
+axes[0].plot(years, trend_wtmhw, color=COLOR_WITH, linestyle='--', linewidth=2, alpha=0.7)
+axes[0].plot(years, trend_nomhw, color=COLOR_NO, linestyle='--', linewidth=2, alpha=0.7)
+axes[0].set_ylabel('TC number')
+axes[0].legend(loc='best')
+axes[0].grid(True, alpha=0.3)
+axes[0].set_title('GL: MHW baseline 1982–2011')
+axes[0].text(0.02, 0.98, 'A', transform=axes[0].transAxes, fontsize=12, fontweight='bold',
+             verticalalignment='top')
+
+num_wtmhw_b9221 = count_indices_by_year(name_wtmhw_b9221['name'].unique())
+num_nomhw_b9221 = count_indices_by_year(name_nomhw_b9221['name'].unique())
+wtmhw_values_b9221 = [num_wtmhw_b9221[year] for year in years]
+nomhw_values_b9221 = [num_nomhw_b9221[year] for year in years]
+slope_wtmhw, intercept_wtmhw, _, _, _ = stats.linregress(years, wtmhw_values_b9221)
+print(stats.linregress(years, wtmhw_values_b9221))
+trend_wtmhw = [slope_wtmhw * year + intercept_wtmhw for year in years]
+slope_nomhw, intercept_nomhw, _, _, _ = stats.linregress(years, nomhw_values_b9221)
+print(stats.linregress(years, nomhw_values_b9221))
+trend_nomhw = [slope_nomhw * year + intercept_nomhw for year in years]
+axes[1].plot(years, wtmhw_values_b9221, color=COLOR_WITH,  marker='o', markersize=4, label='With-MHW', linewidth=1.5)
+axes[1].plot(years, nomhw_values_b9221, color=COLOR_NO, marker='o', markersize=4, label='No-MHW',   linewidth=1.5)
+axes[1].plot(years, trend_wtmhw, color=COLOR_WITH, linestyle='--', linewidth=2, alpha=0.7)
+axes[1].plot(years, trend_nomhw, color=COLOR_NO, linestyle='--', linewidth=2, alpha=0.7)
+axes[1].set_ylabel('TC number')
+axes[1].legend(loc='best')
+axes[1].grid(True, alpha=0.3)
+axes[1].set_title('GL: MHW baseline 1992–2021')
+axes[1].text(0.02, 0.98, 'B', transform=axes[1].transAxes, fontsize=12, fontweight='bold',
+             verticalalignment='top')
+
+fig.tight_layout()
+output_file = "mhw_plot_pkl/Fig5_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/Fig5_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 9))
+axes = axes.flatten()
+
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_wtmhw = name_wtmhw_b8211[filter_func(name_wtmhw_b8211['name'])]
+    basin_nomhw = name_nomhw_b8211[filter_func(name_nomhw_b8211['name'])]
+    num_wtmhw = count_indices_by_year(basin_wtmhw['name'].unique())
+    num_nomhw = count_indices_by_year(basin_nomhw['name'].unique())
+    wtmhw_values = [num_wtmhw[year] for year in years]
+    nomhw_values = [num_nomhw[year] for year in years]
+    slope_wtmhw, intercept_wtmhw, _, _, _ = stats.linregress(years, wtmhw_values)
+    print(stats.linregress(years, wtmhw_values))
+    trend_wtmhw = [slope_wtmhw * year + intercept_wtmhw for year in years]
+    slope_nomhw, intercept_nomhw, _, _, _ = stats.linregress(years, nomhw_values)
+    print(stats.linregress(years, nomhw_values))
+    trend_nomhw = [slope_nomhw * year + intercept_nomhw for year in years]
+    ax.plot(years, wtmhw_values, color=COLOR_WITH,  marker='o', markersize=4, label='With-MHW', linewidth=1.5)
+    ax.plot(years, nomhw_values, color=COLOR_NO, marker='o', markersize=4, label='No-MHW',   linewidth=1.5)
+    ax.plot(years, trend_wtmhw, color=COLOR_WITH, linestyle='--', linewidth=2, alpha=0.7)
+    ax.plot(years, trend_nomhw, color=COLOR_NO, linestyle='--', linewidth=2, alpha=0.7)
+    ax.set_ylabel('TC number')
+    ax.legend(loc='upper right')
+    ax.grid(True, alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1982–2011')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS15_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS15_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
+
+fig, axes = plt.subplots(2, 3, figsize=(10, 9))
+axes = axes.flatten()
+
+for idx, (basin_code, basin_name, filter_func) in enumerate(basins):
+    ax = axes[idx]
+    basin_wtmhw = name_wtmhw_b9221[filter_func(name_wtmhw_b9221['name'])]
+    basin_nomhw = name_nomhw_b9221[filter_func(name_nomhw_b9221['name'])] 
+    num_wtmhw = count_indices_by_year(basin_wtmhw['name'].unique())
+    num_nomhw = count_indices_by_year(basin_nomhw['name'].unique())
+    wtmhw_values = [num_wtmhw[year] for year in years]
+    nomhw_values = [num_nomhw[year] for year in years]
+    slope_wtmhw, intercept_wtmhw, _, _, _ = stats.linregress(years, wtmhw_values)
+    print(stats.linregress(years, wtmhw_values))
+    trend_wtmhw = [slope_wtmhw * year + intercept_wtmhw for year in years]
+    slope_nomhw, intercept_nomhw, _, _, _ = stats.linregress(years, nomhw_values)
+    print(stats.linregress(years, nomhw_values))
+    trend_nomhw = [slope_nomhw * year + intercept_nomhw for year in years]
+    ax.plot(years, wtmhw_values, color=COLOR_WITH,  marker='o', markersize=4, label='With-MHW', linewidth=1.5)
+    ax.plot(years, nomhw_values, color=COLOR_NO, marker='o', markersize=4, label='No-MHW',   linewidth=1.5)
+    ax.plot(years, trend_wtmhw, color=COLOR_WITH, linestyle='--', linewidth=2, alpha=0.7)
+    ax.plot(years, trend_nomhw, color=COLOR_NO, linestyle='--', linewidth=2, alpha=0.7)
+    ax.set_ylabel('TC number')
+    ax.legend(loc='upper right')
+    ax.grid(True, alpha=0.3)
+    if basin_code == 'AL':
+        basin_code = 'NA'
+    ax.set_title(f'{basin_code}: MHW baseline 1992–2021')
+    if basin_code == 'NA':
+        basin_code = 'AL'
+    ax.text(0.02, 0.98, subplot_labels[idx], transform=ax.transAxes,
+            fontsize=12, fontweight='bold', verticalalignment='top')
+
+
+fig.delaxes(axes[5])
+fig.tight_layout()
+output_file = "mhw_plot_pkl/FigS16_Science.pkl"
+with open(output_file, 'wb') as f:
+    pickle.dump(fig, f)
+output_file = "mhw_plot/FigS16_Science.pdf"
+fig.savefig(output_file)
+plt.close(fig)
+subprocess.run(['open', output_file])
